@@ -198,9 +198,17 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
   // ── Customers ───────────────────────────────────────────
   "/customers/individual": {
     required: [{ role: "CanGetCustomersAtOneBank", bankScoped: true }],
+    optional: [
+      { role: "CanCreateCustomerAtOneBank", bankScoped: true },
+      { role: "CanUpdateCustomerIdentity", bankScoped: true },
+    ],
   },
   "/customers/corporate": {
     required: [{ role: "CanGetCustomersAtOneBank", bankScoped: true }],
+    optional: [
+      { role: "CanCreateCustomerAtOneBank", bankScoped: true },
+      { role: "CanUpdateCustomerIdentity", bankScoped: true },
+    ],
   },
 
   // ── Users ─────────────────────────────────────────────
