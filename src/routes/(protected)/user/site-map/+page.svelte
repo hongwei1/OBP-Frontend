@@ -249,12 +249,12 @@
             </div>
           {/if}
         </div>
-        {#each node.children as child, i}
+        {#each node.children as child, i (child.fullPath)}
           {@render renderNode(child, i === node.children.length - 1, depth + 1)}
         {/each}
       {/snippet}
 
-      {#each sectionTrees[sectionKey] as node, i}
+      {#each sectionTrees[sectionKey] as node, i (node.fullPath)}
         {@render renderNode(node, i === sectionTrees[sectionKey].length - 1, 0)}
       {/each}
     </div>

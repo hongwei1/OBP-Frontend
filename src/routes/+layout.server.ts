@@ -17,6 +17,7 @@ export interface RootLayoutData {
   username?: string;
   opeyConsentInfo?: OBPConsentInfo;
   externalLinks: Record<string, string>;
+  userEntitlements: Array<{ entitlement_id: string; role_name: string; bank_id: string }>;
 }
 
 export async function load(event: RequestEvent) {
@@ -94,8 +95,12 @@ export async function load(event: RequestEvent) {
   const totalTime = endTime - startTime;
   logger.info(`✅ Layout server load completed in ${totalTime.toFixed(2)}ms`);
 
+  const userEntitlements =
+    (session?.data?.user as any)?.entitlements?.list || [];
+
   return {
     ...data,
     externalLinks: validExternalLinks,
+    userEntitlements,
   } as RootLayoutData;
 }

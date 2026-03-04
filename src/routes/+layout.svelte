@@ -3,7 +3,7 @@
   import { Navigation } from "@skeletonlabs/skeleton-svelte";
   import { page } from "$app/state";
   import { navSections as allNavSections, type NavigationSection } from "$lib/config/navigation";
-  import { SITE_MAP } from "$lib/utils/roleChecker";
+  import { SITE_MAP, type UserEntitlement } from "$lib/utils/roleChecker";
 
   // Separate My Account and Banks from other sections so they render in specific positions
   const myAccountSection = allNavSections.find(s => s.id === "my-account");
@@ -149,14 +149,23 @@
     expandedSections[id] = !expandedSections[id];
   }
 
+  function userHasRole(roleName: string): boolean {
+    const entitlements: UserEntitlement[] = data.userEntitlements || [];
+    return entitlements.some((e) => e.role_name === roleName);
+  }
+
   function getMenuTooltip(href: string, label: string): string {
     if (href.startsWith("http")) return label;
     const path = href.split("?")[0];
     const config = SITE_MAP[path];
     if (!config) return `${label}\nNo Roles required`;
-    const roles = config.required.map((r) => r.role);
+    const roles = config.required;
     if (roles.length === 0) return `${label}\nRequired roles: (none)`;
-    return `${label}\nRequired roles: ${roles.join(", ")}`;
+    const lines = roles.map((r) => {
+      const has = userHasRole(r.role);
+      return `${has ? "\u2713" : "\u2717"} ${r.role}`;
+    });
+    return `${label}\nRequired roles:\n${lines.join("\n")}`;
   }
 
   logger.info("🧭 Navigation state initialized");

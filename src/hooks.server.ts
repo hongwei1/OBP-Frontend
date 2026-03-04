@@ -10,6 +10,7 @@ import { env } from "$env/dynamic/private";
 import { oauth2ProviderManager } from "$lib/oauth/providerManager";
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import { resourceDocsCache } from "$lib/stores/resourceDocsCache";
+import { validateSiteMapScopes } from "$lib/utils/roleChecker";
 
 declare const process: { env: Record<string, string | undefined>; argv: string[] };
 
@@ -55,6 +56,8 @@ function checkServerPort() {
 // Startup scripts
 // Check server port
 checkServerPort();
+// Validate SITE_MAP doesn't mix bankScoped and system-wide roles on any page
+validateSiteMapScopes();
 
 // Init Redis
 let client: Redis;

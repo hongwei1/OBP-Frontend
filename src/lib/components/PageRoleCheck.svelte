@@ -20,7 +20,6 @@
     return checkRoles(userEntitlements || [], required || [], currentBankId);
   });
 
-  let firstMissingRequired = $derived(requiredCheck.missingRoles[0] || null);
   let showContent = $derived(requiredCheck.hasAllRoles);
 
   // Check optional roles (informational — content still renders)
@@ -36,13 +35,15 @@
   );
 </script>
 
-{#if firstMissingRequired}
+{#if requiredCheck.missingRoles.length > 0}
   <div class="role-alerts">
-    <MissingRoleAlert
-      roles={[firstMissingRequired.role]}
-      bankId={firstMissingRequired.bankId || undefined}
-      message={`You need the following role to access this page: ${firstMissingRequired.role}`}
-    />
+    {#each requiredCheck.missingRoles as missingRole}
+      <MissingRoleAlert
+        roles={[missingRole.role]}
+        bankId={missingRole.bankId || undefined}
+        message={`You need the following role to access this page: ${missingRole.role}`}
+      />
+    {/each}
   </div>
 {/if}
 

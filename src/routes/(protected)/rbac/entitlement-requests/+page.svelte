@@ -96,6 +96,13 @@
     }
   }
 
+  const USER_COLORS = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1','#14b8a6'];
+  function getUserColor(id: string): string {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
+    return USER_COLORS[hash % USER_COLORS.length];
+  }
+
   // Track processing state for each request
   let processingRequests = $state<Map<string, boolean>>(new Map());
   let processErrors = $state<Map<string, string>>(new Map());
@@ -373,56 +380,16 @@
         <div class="requests-container">
           <div class="requests-list">
             {#each filteredRequests as request}
-              <div class="request-card">
-                <div class="request-header">
-                  <div class="request-title">
-                    <h4 class="role-name">{request.role_name}</h4>
-                  </div>
-                  <div class="request-id">
-                    ID: {request.entitlement_request_id}
-                  </div>
-                </div>
-
-                <div class="request-body">
-                  <div class="request-info">
-                    <div class="info-item">
-                      <User size={16} class="info-icon" />
-                      <div class="info-content">
-                        <span class="info-label">User:</span>
-                        <span class="info-value">{request.user.username}</span>
-                        <span class="info-detail">({request.user.email})</span>
-                      </div>
+              <div class="request-card" style="border-left-color: {getUserColor(request.user.user_id)}">
+                <!-- User row: prominent -->
+                <div class="card-user-row">
+                  <div class="user-info">
+                    <div class="user-name">
+                      <User size={15} class="user-icon" />
+                      {request.user.username}
                     </div>
-
-                    {#if request.bank_id}
-                      <div class="info-item">
-                        <span class="info-icon">🏦</span>
-                        <div class="info-content">
-                          <span class="info-label">Bank:</span>
-                          <span class="info-value">{request.bank_id}</span>
-                        </div>
-                      </div>
-                    {:else}
-                      <div class="info-item">
-                        <span class="info-icon">🌐</span>
-                        <div class="info-content">
-                          <span class="info-label">Scope:</span>
-                          <span class="info-value">System-wide</span>
-                        </div>
-                      </div>
-                    {/if}
-
-                    <div class="info-item">
-                      <Calendar size={16} class="info-icon" />
-                      <div class="info-content">
-                        <span class="info-label">Created:</span>
-                        <span class="info-value"
-                          >{formatDate(request.created)}</span
-                        >
-                      </div>
-                    </div>
+                    <div class="user-email">{request.user.email}</div>
                   </div>
-
                   <div class="request-actions">
                     {#if processErrors.get(request.entitlement_request_id)}
                       <div class="action-error">
@@ -431,11 +398,8 @@
                     {/if}
                     <button
                       class="btn-accept"
-                      onclick={() =>
-                        handleAccept(request.entitlement_request_id)}
-                      disabled={processingRequests.get(
-                        request.entitlement_request_id,
-                      )}
+                      onclick={() => handleAccept(request.entitlement_request_id)}
+                      disabled={processingRequests.get(request.entitlement_request_id)}
                     >
                       {#if processingRequests.get(request.entitlement_request_id)}
                         ⏳ Processing...
@@ -446,11 +410,8 @@
                     </button>
                     <button
                       class="btn-decline"
-                      onclick={() =>
-                        handleDecline(request.entitlement_request_id)}
-                      disabled={processingRequests.get(
-                        request.entitlement_request_id,
-                      )}
+                      onclick={() => handleDecline(request.entitlement_request_id)}
+                      disabled={processingRequests.get(request.entitlement_request_id)}
                     >
                       {#if processingRequests.get(request.entitlement_request_id)}
                         ⏳ Processing...
@@ -459,6 +420,25 @@
                         Decline
                       {/if}
                     </button>
+                  </div>
+                </div>
+
+                <!-- Role + scope on same line, date + ID below -->
+                <div class="card-meta-row">
+                  <div class="role-scope">
+                    <span class="role-name">{request.role_name}</span>
+                    {#if request.bank_id}
+                      <span class="scope-badge scope-bank">🏦 {request.bank_id}</span>
+                    {:else}
+                      <span class="scope-badge scope-system">🌐 System-wide</span>
+                    {/if}
+                  </div>
+                  <div class="card-footer-meta">
+                    <span class="created-date">
+                      <Calendar size={13} class="meta-icon" />
+                      {formatDate(request.created)}
+                    </span>
+                    <span class="request-id">{request.entitlement_request_id}</span>
                   </div>
                 </div>
               </div>
@@ -802,6 +782,7 @@
   .request-card {
     background: #f9fafb;
     border: 1px solid #e5e7eb;
+    border-left: 3px solid transparent;
     border-radius: 8px;
     overflow: hidden;
     transition: all 0.2s;
@@ -821,122 +802,72 @@
     border-color: rgb(var(--color-surface-500));
   }
 
-  .request-header {
-    padding: 1rem;
+  /* User row — top section, prominent */
+  .card-user-row {
+    padding: 0.875rem 1rem;
     background: white;
     border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
   }
 
-  :global([data-mode="dark"]) .request-header {
+  :global([data-mode="dark"]) .card-user-row {
     background: rgb(var(--color-surface-800));
     border-bottom-color: rgb(var(--color-surface-700));
   }
 
-  .request-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .role-name {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-  }
-
-  :global([data-mode="dark"]) .role-name {
-    color: var(--color-surface-100);
-  }
-
-  .request-id {
-    font-size: 0.75rem;
-    color: #6b7280;
-    font-family: monospace;
-  }
-
-  :global([data-mode="dark"]) .request-id {
-    color: var(--color-surface-400);
-  }
-
-  .request-body {
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 1rem;
-  }
-
-  .request-info {
+  .user-info {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    flex: 1;
+    gap: 0.125rem;
+    min-width: 0;
   }
 
-  .info-item {
+  .user-name {
     display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .info-icon {
-    color: #6b7280;
-    flex-shrink: 0;
-    margin-top: 0.125rem;
-  }
-
-  :global([data-mode="dark"]) .info-icon {
-    color: var(--color-surface-400);
-  }
-
-  .info-content {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    align-items: baseline;
-  }
-
-  .info-label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #6b7280;
-  }
-
-  :global([data-mode="dark"]) .info-label {
-    color: var(--color-surface-400);
-  }
-
-  .info-value {
-    font-size: 0.875rem;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1rem;
+    font-weight: 700;
     color: #111827;
-    font-weight: 500;
   }
 
-  :global([data-mode="dark"]) .info-value {
+  :global([data-mode="dark"]) .user-name {
     color: var(--color-surface-100);
   }
 
-  .info-detail {
-    font-size: 0.75rem;
-    color: #9ca3af;
+  .user-name :global(.user-icon) {
+    color: #6b7280;
+    flex-shrink: 0;
   }
 
-  :global([data-mode="dark"]) .info-detail {
-    color: var(--color-surface-500);
+  :global([data-mode="dark"]) .user-name :global(.user-icon) {
+    color: var(--color-surface-400);
+  }
+
+  .user-email {
+    font-size: 0.8rem;
+    color: #6b7280;
+    padding-left: 1.4rem;
+  }
+
+  :global([data-mode="dark"]) .user-email {
+    color: var(--color-surface-400);
   }
 
   .request-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     flex-shrink: 0;
+    align-items: center;
   }
 
   .action-error {
     width: 100%;
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.375rem 0.5rem;
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 4px;
@@ -948,6 +879,97 @@
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.4);
     color: rgb(var(--color-error-200));
+  }
+
+  /* Role + scope row — bottom section */
+  .card-meta-row {
+    padding: 0.625rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .role-scope {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .role-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    font-family: monospace;
+  }
+
+  :global([data-mode="dark"]) .role-name {
+    color: var(--color-surface-200);
+  }
+
+  .scope-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .scope-badge.scope-bank {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  :global([data-mode="dark"]) .scope-badge.scope-bank {
+    background: rgba(59, 130, 246, 0.2);
+    color: rgb(var(--color-primary-300));
+  }
+
+  .scope-badge.scope-system {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+
+  :global([data-mode="dark"]) .scope-badge.scope-system {
+    background: rgb(var(--color-surface-600));
+    color: var(--color-surface-300);
+  }
+
+  .card-footer-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+
+  .created-date {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  :global([data-mode="dark"]) .created-date {
+    color: var(--color-surface-500);
+  }
+
+  .created-date :global(.meta-icon) {
+    flex-shrink: 0;
+  }
+
+  .request-id {
+    font-size: 0.7rem;
+    color: #d1d5db;
+    font-family: monospace;
+  }
+
+  :global([data-mode="dark"]) .request-id {
+    color: var(--color-surface-600);
   }
 
   .btn-accept,
@@ -1099,7 +1121,7 @@
       width: 100%;
     }
 
-    .request-body {
+    .card-user-row {
       flex-direction: column;
       align-items: flex-start;
     }
@@ -1114,8 +1136,10 @@
       justify-content: center;
     }
 
-    .action-error {
-      font-size: 0.7rem;
+    .card-footer-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
     }
   }
 </style>

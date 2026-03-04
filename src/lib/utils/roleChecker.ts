@@ -68,6 +68,9 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
       { role: "CanDeleteEntitlementRequestsAtAnyBank" },
     ],
   },
+  "/rbac/groups": {
+    required: [{ role: "CanGetGroupsAtAllBanks" }],
+  },
   "/rbac/groups/create": {
     required: [{ role: "CanCreateGroupAtAllBanks" }],
   },
@@ -132,6 +135,12 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
     required: [{ role: "CanManageFeaturedApiCollections" }],
   },
 
+  // ── Products ────────────────────────────────────────────
+  "/products/bootstrap": {
+    required: [{ role: "CanUpdateApiProduct", bankScoped: true }],
+    optional: [{ role: "CanDeleteApiProduct", bankScoped: true }],
+  },
+
   // ── Banks ─────────────────────────────────────────────
   "/banks/create": {
     required: [{ role: "CanCreateBank" }],
@@ -152,6 +161,12 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
   },
 
   // ── Metrics ───────────────────────────────────────────
+  "/metrics": {
+    required: [{ role: "CanReadMetrics" }],
+  },
+  "/aggregate-metrics": {
+    required: [{ role: "CanReadAggregateMetrics" }],
+  },
   "/connector-traces": {
     required: [{ role: "CanGetConnectorTrace" }],
   },
@@ -247,6 +262,30 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
     required: [{ role: "CanGetSystemLevelDynamicEntities" }],
   },
 };
+
+/**
+ * Validate that no SITE_MAP page mixes bankScoped and non-bankScoped roles
+ * in its required list. Mixing scopes would show confusing role widgets
+ * (some saying "System-wide" and others "Bank-level") on the same page.
+ * Logs a warning at startup for any violations.
+ */
+export function validateSiteMapScopes(): void {
+  for (const [route, config] of Object.entries(SITE_MAP)) {
+    const roles = config.required;
+    if (roles.length < 2) continue;
+
+    const hasBankScoped = roles.some((r) => r.bankScoped);
+    const hasSystemScoped = roles.some((r) => !r.bankScoped);
+
+    if (hasBankScoped && hasSystemScoped) {
+      logger.warn(
+        `SITE_MAP "${route}" mixes bankScoped and system-wide roles in its required list: ` +
+          roles.map((r) => `${r.role}${r.bankScoped ? " (bankScoped)" : ""}`).join(", ") +
+          `. This will show confusing role widgets. Separate into distinct pages or unify the scope.`,
+      );
+    }
+  }
+}
 
 /**
  * Look up page roles by route ID (stripping /(protected) prefix if present)

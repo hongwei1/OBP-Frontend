@@ -99,6 +99,13 @@
   // Count total entitlements
   let totalCount = $derived(relevantEntitlements.length);
   let filteredCount = $derived(filteredEntitlements.length);
+
+  const USER_COLORS = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1','#14b8a6'];
+  function getUserColor(id: string): string {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
+    return USER_COLORS[hash % USER_COLORS.length];
+  }
 </script>
 
 <svelte:head>
@@ -257,7 +264,7 @@
     </div>
 
     {#snippet entitlementCard(entitlement: Entitlement)}
-      <div class="entitlement-card">
+      <div class="entitlement-card" style="border-left-color: {getUserColor(entitlement.user_id)}">
         <div class="entitlement-header">
           <div class="entitlement-role">
             <h4 class="role-name">
@@ -661,6 +668,7 @@
   .entitlement-card {
     background: white;
     border: 1px solid #e5e7eb;
+    border-left: 3px solid transparent;
     border-radius: 8px;
     padding: 1rem;
     transition: all 0.2s;
