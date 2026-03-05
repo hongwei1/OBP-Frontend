@@ -96,12 +96,25 @@
     }
   }
 
-  const USER_COLORS = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1','#14b8a6'];
-  function getUserColor(id: string): string {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
-    return USER_COLORS[hash % USER_COLORS.length];
-  }
+  let userId = $derived((data.userId as string) || "");
+
+  const GROUP_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#ec4899','#06b6d4'];
+  let requestColors = $derived.by(() => {
+    const result: string[] = [];
+    let colorIdx = -1;
+    let prevId = '';
+    for (const req of filteredRequests) {
+      const id = req.user.user_id;
+      if (id === userId) {
+        result.push('');
+      } else {
+        if (id !== prevId) colorIdx++;
+        result.push(GROUP_COLORS[colorIdx % GROUP_COLORS.length]);
+        prevId = id;
+      }
+    }
+    return result;
+  });
 
   // Track processing state for each request
   let processingRequests = $state<Map<string, boolean>>(new Map());
@@ -379,14 +392,17 @@
       {:else}
         <div class="requests-container">
           <div class="requests-list">
-            {#each filteredRequests as request}
-              <div class="request-card" style="border-left-color: {getUserColor(request.user.user_id)}">
+            {#each filteredRequests as request, i}
+              <div class="request-card" style="border-left-color: {requestColors[i] || 'transparent'}">
                 <!-- User row: prominent -->
                 <div class="card-user-row">
                   <div class="user-info">
                     <div class="user-name">
                       <User size={15} class="user-icon" />
                       {request.user.username}
+                      {#if request.user.user_id === userId}
+                        <span class="you-badge">You</span>
+                      {/if}
                     </div>
                     <div class="user-email">{request.user.email}</div>
                   </div>
@@ -845,6 +861,21 @@
 
   :global([data-mode="dark"]) .user-name :global(.user-icon) {
     color: var(--color-surface-400);
+  }
+
+  .you-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    background: #dcfce7;
+    color: #15803d;
+    letter-spacing: 0.03em;
+  }
+
+  :global([data-mode="dark"]) .you-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: rgb(var(--color-success-300));
   }
 
   .user-email {

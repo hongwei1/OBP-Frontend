@@ -100,12 +100,27 @@
   let totalCount = $derived(relevantEntitlements.length);
   let filteredCount = $derived(filteredEntitlements.length);
 
-  const USER_COLORS = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1','#14b8a6'];
-  function getUserColor(id: string): string {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
-    return USER_COLORS[hash % USER_COLORS.length];
+  let userId = $derived((data.userId as string) || "");
+
+  const GROUP_COLORS = ['#3b82f6','#8b5cf6','#f59e0b','#ec4899','#06b6d4'];
+  function computeGroupColors(items: Entitlement[]): string[] {
+    const result: string[] = [];
+    let colorIdx = -1;
+    let prevId = '';
+    for (const item of items) {
+      if (item.user_id === userId) {
+        result.push('');
+      } else {
+        if (item.user_id !== prevId) colorIdx++;
+        result.push(GROUP_COLORS[colorIdx % GROUP_COLORS.length]);
+        prevId = item.user_id;
+      }
+    }
+    return result;
   }
+
+  let systemColors = $derived(computeGroupColors(systemEntitlements));
+  let bankColors = $derived(computeGroupColors(bankEntitlements));
 </script>
 
 <svelte:head>
@@ -221,8 +236,8 @@
 
               {#if systemEntitlements.length > 0}
                 <div class="entitlements-list">
-                  {#each systemEntitlements as entitlement}
-                    {@render entitlementCard(entitlement)}
+                  {#each systemEntitlements as entitlement, i}
+                    {@render entitlementCard(entitlement, systemColors[i])}
                   {/each}
                 </div>
               {:else}
@@ -250,8 +265,8 @@
                 <div class="column-empty">Select a bank to view bank-level entitlements</div>
               {:else if bankEntitlements.length > 0}
                 <div class="entitlements-list">
-                  {#each bankEntitlements as entitlement}
-                    {@render entitlementCard(entitlement)}
+                  {#each bankEntitlements as entitlement, i}
+                    {@render entitlementCard(entitlement, bankColors[i])}
                   {/each}
                 </div>
               {:else}
@@ -263,15 +278,12 @@
       {/if}
     </div>
 
-    {#snippet entitlementCard(entitlement: Entitlement)}
-      <div class="entitlement-card" style="border-left-color: {getUserColor(entitlement.user_id)}">
+    {#snippet entitlementCard(entitlement: Entitlement, color: string)}
+      <div class="entitlement-card" style="border-left-color: {color || 'transparent'}">
         <div class="entitlement-header">
           <div class="entitlement-role">
             <h4 class="role-name">
-              <a
-                href="/rbac/roles/{entitlement.role_name}"
-                class="role-link"
-              >
+              <a href="/rbac/roles/{entitlement.role_name}" class="role-link">
                 {entitlement.role_name}
               </a>
               <a
@@ -290,12 +302,12 @@
             <User size={16} class="info-icon" />
             <div class="info-content">
               <span class="info-label">User:</span>
-              <a
-                href="/users/{entitlement.user_id}"
-                class="user-link"
-              >
+              <a href="/users/{entitlement.user_id}" class="user-link">
                 {entitlement.username}
               </a>
+              {#if entitlement.user_id === userId}
+                <span class="you-badge">You</span>
+              {/if}
             </div>
           </div>
         </div>
@@ -832,6 +844,21 @@
 
   :global([data-mode="dark"]) .user-link:hover {
     color: rgb(var(--color-primary-300));
+  }
+
+  .you-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    background: #dcfce7;
+    color: #15803d;
+    letter-spacing: 0.03em;
+  }
+
+  :global([data-mode="dark"]) .you-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: rgb(var(--color-success-300));
   }
 
   .info-detail {
