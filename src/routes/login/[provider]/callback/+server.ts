@@ -226,7 +226,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
   );
   logger.debug("Full current user data:", user);
 
-  if (user.user_id && user.email) {
+  if (user.user_id) {
     // Store user data in session
     const { session } = event.locals;
     await session.setData({
@@ -256,7 +256,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
     });
   } else {
     logger.error(
-      "Invalid user data received from OBP - missing user_id or email:",
+      "Invalid user data received from OBP - missing user_id:",
       user,
     );
 

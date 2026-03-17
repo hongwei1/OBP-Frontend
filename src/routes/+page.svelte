@@ -11,7 +11,7 @@
 	const askParam = $derived($page.url.searchParams.get('ask'));
 	let name = data.username || 'Guest';
 	let opeyConsentInfo = data.opeyConsentInfo;
-	let isAuthenticated = !!data.email;
+	let isAuthenticated = !!data.userId;
 
 	// Configurable text via environment variables
 	const welcomeTitle = env.PUBLIC_WELCOME_TITLE || 'Welcome!';

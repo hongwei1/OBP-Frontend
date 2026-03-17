@@ -9,8 +9,8 @@ export const load: ServerLoad = async ({ url }) => {
 	const availableProviders = oauth2ProviderManager.getAvailableProviders();
 	const unavailableProviders = oauth2ProviderManager.getUnavailableProviders();
 
-	// If we have exactly 1 available provider, redirect directly to it
-	if (availableProviders.length === 1) {
+	// If we have exactly 1 available provider and no messages to display, redirect directly to it
+	if (availableProviders.length === 1 && !errorMessage) {
 		const providerUrl = `/login/${availableProviders[0].provider}${redirectTo ? `?redirect_to=${encodeURIComponent(redirectTo)}` : ''}`;
 		throw redirect(302, providerUrl);
 	}
