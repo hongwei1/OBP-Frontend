@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @source "../node_modules/@obp/shared/dist";
+@source "../node_modules/@obp/shared/src";
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
