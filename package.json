@@ -1,0 +1,8 @@
+{
+  "name": "obp-frontend",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
