@@ -4,7 +4,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestEvent } from './$types';
 import { obp_requests } from '$lib/obp/requests';
 import { env } from '$env/dynamic/private';
-import { deduplicateRoles, pickConsentRole } from 'obp-svelte-components/opey';
+import { deduplicateRoles, pickConsentRole } from '@obp/shared/opey';
 
 /**
  * POST /api/opey/consent

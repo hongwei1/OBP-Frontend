@@ -1,4 +1,4 @@
-import { createOpeyAuthHandler } from 'obp-svelte-components/server/opey';
+import { createOpeyAuthHandler } from '@obp/shared/server/opey';
 import { env } from '$env/dynamic/private';
 
 export const { POST } = createOpeyAuthHandler({

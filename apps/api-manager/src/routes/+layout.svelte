@@ -1,6 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import { NavigationSidebar } from "obp-svelte-components";
+  import { NavigationSidebar } from "@obp/shared";
   import { page } from "$app/state";
   import { navSections as allNavSections, myAccountItems } from "$lib/config/navigation";
   import { SITE_MAP, type UserEntitlement } from "$lib/utils/roleChecker";
