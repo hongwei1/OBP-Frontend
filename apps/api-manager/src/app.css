@@ -1,0 +1,38 @@
+@import "tailwindcss";
+@source "../node_modules/obp-svelte-components/dist";
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@import "@skeletonlabs/skeleton";
+@import "@skeletonlabs/skeleton/themes/cerberus";
+
+@import "@skeletonlabs/skeleton-svelte";
+/* Register a Custom Themes */
+/* Make sure to resolve the relative path. */
+/* Note the .css extension is optional. */
+@import "../obp-theme.css";
+
+/* for dark mode toggling */
+@custom-variant dark (&:where([data-mode=dark], [data-mode=dark] *));
+
+/* Global select dropdown styling for better contrast */
+select option {
+  background: white !important;
+  color: #111827 !important;
+}
+
+[data-mode="dark"] select option {
+  background: rgb(31 41 55) !important;
+  color: rgb(243 244 246) !important;
+}
+
+/* Additional select styling to ensure readability */
+select {
+  background: white;
+  color: #111827;
+}
+
+[data-mode="dark"] select {
+  background: rgb(31 41 55);
+  color: rgb(243 244 246);
+}

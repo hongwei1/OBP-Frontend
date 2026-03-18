@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-theme="obptheme" data-mode="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex, follow" />
+    <meta
+      name="description"
+      content="API Manager II - Modern API management interface for Open Bank Project"
+    />
+    <link rel="canonical" href="%sveltekit.env.PUBLIC_CANONICAL_URL%" />
+    <link rel="icon" href="%sveltekit.assets%/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#242c46" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="API Manager II" />
+    <meta
+      property="og:description"
+      content="Modern API management interface for Open Bank Project"
+    />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary" />
+    <meta property="twitter:title" content="API Manager II" />
+    <meta
+      property="twitter:description"
+      content="Modern API management interface for Open Bank Project"
+    />
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" href="%sveltekit.assets%/favicon.png" />
+
+    <!-- Initialize dark mode from localStorage before page renders -->
+    <script>
+      (function () {
+        try {
+          const mode = localStorage.getItem("mode") || "dark";
+          document.documentElement.setAttribute("data-mode", mode);
+        } catch (e) {
+          document.documentElement.setAttribute("data-mode", "dark");
+        }
+      })();
+    </script>
+
+    %sveltekit.head%
+  </head>
+
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>

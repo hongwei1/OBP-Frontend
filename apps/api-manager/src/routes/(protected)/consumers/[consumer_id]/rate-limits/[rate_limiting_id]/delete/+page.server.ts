@@ -1,0 +1,186 @@
+import { createLogger } from "$lib/utils/logger";
+import { obp_requests } from "$lib/obp/requests";
+import { error, fail, redirect } from "@sveltejs/kit";
+import type { RequestEvent } from "@sveltejs/kit";
+import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
+
+
+const logger = createLogger("DeleteConsumerRateLimitServer");
+
+interface Consumer {
+  consumer_id: string;
+  app_name: string;
+  app_type: string;
+  description: string;
+  developer_email: string;
+  enabled: boolean;
+  created: string;
+}
+
+interface RateLimit {
+  rate_limiting_id: string;
+  from_date: string;
+  to_date: string;
+  per_second_call_limit: string;
+  per_minute_call_limit: string;
+  per_hour_call_limit: string;
+  per_day_call_limit: string;
+  per_week_call_limit: string;
+  per_month_call_limit: string;
+  created_at: string;
+  updated_at: string;
+  api_name?: string;
+  api_version?: string;
+  bank_id?: string;
+}
+
+export async function load(event: RequestEvent) {
+  const session = event.locals.session;
+
+  if (!session?.data?.user) {
+    throw error(401, "Unauthorized");
+  }
+
+  // Get the OAuth session data
+  const sessionOAuth = SessionOAuthHelper.getSessionOAuth(session);
+  const token = sessionOAuth?.accessToken;
+
+  if (!token) {
+    error(401, {
+      message: "Unauthorized: No access token found in session.",
+    });
+  }
+
+  const consumerId = event.params.consumer_id;
+  const rateLimitingId = event.params.rate_limiting_id;
+
+  if (!consumerId) {
+    error(400, {
+      message: "Consumer ID is required.",
+    });
+  }
+
+  if (!rateLimitingId) {
+    error(400, {
+      message: "Rate Limiting ID is required.",
+    });
+  }
+
+  let consumer: Consumer | undefined = undefined;
+  let rateLimit: RateLimit | undefined = undefined;
+
+  try {
+    // Fetch consumer details
+    consumer = await obp_requests.get(
+      `/obp/v6.0.0/management/consumers/${consumerId}`,
+      token,
+    );
+
+    logger.debug(`Retrieved consumer: ${consumer?.app_name}`);
+  } catch (e) {
+    logger.error("Error fetching consumer:", e);
+    error(404, {
+      message: "Consumer not found.",
+    });
+  }
+
+  if (!consumer) {
+    error(404, {
+      message: "Consumer not found.",
+    });
+  }
+
+  try {
+    // Fetch all rate limits for this consumer
+    const rateLimitsResponse = await obp_requests.get(
+      `/obp/v6.0.0/management/consumers/${consumerId}/consumer/rate-limits`,
+      token,
+    );
+
+    const rateLimits = rateLimitsResponse?.limits || [];
+
+    // Find the specific rate limit
+    rateLimit = rateLimits.find(
+      (limit: RateLimit) => limit.rate_limiting_id === rateLimitingId,
+    );
+
+    if (!rateLimit) {
+      logger.error(`Rate limit ${rateLimitingId} not found`);
+      error(404, {
+        message: "Rate limit not found.",
+      });
+    }
+
+    logger.debug(`Retrieved rate limit: ${rateLimit.rate_limiting_id}`);
+  } catch (e) {
+    logger.error("Error fetching rate limit:", e);
+    error(404, {
+      message: "Rate limit not found.",
+    });
+  }
+
+  return {
+    consumer,
+    rateLimit,
+  };
+}
+
+export const actions = {
+  default: async (event: RequestEvent) => {
+    const session = event.locals.session;
+
+    if (!session?.data?.user) {
+      return fail(401, {
+        error: "Unauthorized",
+      });
+    }
+
+    // Get the OAuth session data
+    const sessionOAuth = SessionOAuthHelper.getSessionOAuth(session);
+    const token = sessionOAuth?.accessToken;
+
+    if (!token) {
+      return fail(401, {
+        error: "Unauthorized: No access token found in session.",
+      });
+    }
+
+    const consumerId = event.params.consumer_id;
+    const rateLimitingId = event.params.rate_limiting_id;
+
+    if (!consumerId) {
+      return fail(400, {
+        error: "Consumer ID is required.",
+      });
+    }
+
+    if (!rateLimitingId) {
+      return fail(400, {
+        error: "Rate Limiting ID is required.",
+      });
+    }
+
+    try {
+      logger.debug(
+        `Deleting rate limit ${rateLimitingId} for consumer ${consumerId}`,
+      );
+
+      await obp_requests.delete(
+        `/obp/v6.0.0/management/consumers/${consumerId}/consumer/rate-limits/${rateLimitingId}`,
+        token,
+      );
+
+      logger.info(
+        `Successfully deleted rate limit ${rateLimitingId} for consumer ${consumerId}`,
+      );
+    } catch (e: any) {
+      logger.error("Error deleting rate limit:", e);
+      return fail(500, {
+        error: e.message || "Failed to delete rate limit. Please try again.",
+      });
+    }
+
+    // Redirect back to rate limits page
+    throw redirect(303, `/consumers/${consumerId}/rate-limits`);
+  },
+};

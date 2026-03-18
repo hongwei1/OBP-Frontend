@@ -1,0 +1,389 @@
+/* OBP-Manager Styling - Isolated CSS for management pages */
+
+.obp-manager {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* Header Styling */
+.obp-manager-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem 0;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.obp-manager-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 300;
+  text-align: center;
+}
+
+.obp-manager-header .subtitle {
+  text-align: center;
+  margin-top: 0.5rem;
+  opacity: 0.9;
+  font-size: 1rem;
+}
+
+/* Container and Layout */
+.obp-manager-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.obp-manager-grid {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.obp-manager-grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.obp-manager-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.obp-manager-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Card Components */
+.obp-manager-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e8ed;
+  transition: box-shadow 0.3s ease;
+}
+
+.obp-manager-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.obp-manager-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.obp-manager-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0;
+}
+
+.obp-manager-card-subtitle {
+  color: #718096;
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Metrics Cards */
+.obp-manager-metric-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #667eea;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.obp-manager-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.obp-manager-metric-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #667eea;
+  margin: 0;
+  line-height: 1;
+}
+
+.obp-manager-metric-label {
+  font-size: 0.875rem;
+  color: #718096;
+  margin: 0.5rem 0 0 0;
+  font-weight: 500;
+}
+
+.obp-manager-metric-change {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.obp-manager-metric-change.positive {
+  color: #38a169;
+}
+
+.obp-manager-metric-change.negative {
+  color: #e53e3e;
+}
+
+.obp-manager-metric-change.neutral {
+  color: #718096;
+}
+
+/* Chart Container */
+.obp-manager-chart-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e8ed;
+  height: 400px;
+}
+
+/* Status Indicators */
+.obp-manager-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.obp-manager-status.online {
+  background-color: #f0fff4;
+  color: #38a169;
+  border: 1px solid #9ae6b4;
+}
+
+.obp-manager-status.offline {
+  background-color: #fff5f5;
+  color: #e53e3e;
+  border: 1px solid #feb2b2;
+}
+
+.obp-manager-status.warning {
+  background-color: #fffbeb;
+  color: #d69e2e;
+  border: 1px solid #fbd38d;
+}
+
+/* Tables */
+.obp-manager-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.obp-manager-table th {
+  background-color: #f7fafc;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.875rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.obp-manager-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+.obp-manager-table tr:hover {
+  background-color: #f7fafc;
+}
+
+/* Buttons */
+.obp-manager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.obp-manager-btn-primary {
+  background-color: #667eea;
+  color: white;
+}
+
+.obp-manager-btn-primary:hover {
+  background-color: #5a67d8;
+}
+
+.obp-manager-btn-secondary {
+  background-color: #edf2f7;
+  color: #4a5568;
+}
+
+.obp-manager-btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+.obp-manager-btn-ghost {
+  background-color: transparent;
+  color: #667eea;
+  border: 1px solid #667eea;
+}
+
+.obp-manager-btn-ghost:hover {
+  background-color: #667eea;
+  color: white;
+}
+
+/* Navigation Breadcrumbs */
+.obp-manager-breadcrumb {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #718096;
+  margin-bottom: 1.5rem;
+}
+
+.obp-manager-breadcrumb a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.obp-manager-breadcrumb a:hover {
+  color: #5a67d8;
+}
+
+.obp-manager-breadcrumb .separator {
+  margin: 0 0.5rem;
+  color: #cbd5e0;
+}
+
+/* Loading States */
+.obp-manager-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Alert Messages */
+.obp-manager-alert {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border-left: 4px solid;
+}
+
+.obp-manager-alert.info {
+  background-color: #ebf8ff;
+  border-color: #3182ce;
+  color: #2b6cb0;
+}
+
+.obp-manager-alert.success {
+  background-color: #f0fff4;
+  border-color: #38a169;
+  color: #2f855a;
+}
+
+.obp-manager-alert.warning {
+  background-color: #fffbeb;
+  border-color: #d69e2e;
+  color: #b7791f;
+}
+
+.obp-manager-alert.error {
+  background-color: #fff5f5;
+  border-color: #e53e3e;
+  color: #c53030;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .obp-manager-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .obp-manager-container {
+    padding: 0 1rem;
+  }
+
+  .obp-manager-grid-2,
+  .obp-manager-grid-3,
+  .obp-manager-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .obp-manager-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .obp-manager-metric-value {
+    font-size: 2rem;
+  }
+
+  .obp-manager-chart-container {
+    height: 300px;
+  }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .obp-manager {
+    background-color: #1a202c;
+    color: #e2e8f0;
+  }
+
+  .obp-manager-card,
+  .obp-manager-metric-card,
+  .obp-manager-chart-container {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+
+  .obp-manager-card-title {
+    color: #e2e8f0;
+  }
+
+  .obp-manager-table {
+    background: #2d3748;
+  }
+
+  .obp-manager-table th {
+    background-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .obp-manager-table td {
+    color: #e2e8f0;
+    border-color: #4a5568;
+  }
+}
