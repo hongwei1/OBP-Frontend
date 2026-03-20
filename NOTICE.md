@@ -1,5 +1,5 @@
-Open Bank Project API
-Copyright (C) 2011-2025, TESOBE GmbH
+Open Bank Project Frontend
+Copyright (C) 2011-2026, TESOBE GmbH
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
