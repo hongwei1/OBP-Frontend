@@ -28,7 +28,6 @@
     Compass,
     KeyRound,
     SquareTerminal,
-    Users,
     ChevronDown,
     ChevronRight,
     CreditCard,
@@ -235,11 +234,6 @@
   // Menu items rendered after My Account
   let menuItems = $state([
     {
-      label: "Users",
-      href: "/users",
-      iconComponent: Users,
-    },
-    {
       label: "Consumers",
       href: "/consumers",
       iconComponent: KeyRound,
@@ -434,7 +428,7 @@
           </Navigation.Group>
         {/if}
 
-        <!-- Other top-level items: Users, Consumers, etc. -->
+        <!-- Other top-level items: Consumers, etc. -->
         <Navigation.Group>
           <Navigation.Menu class="flex flex-col gap-2">
             {#each menuItems as item}

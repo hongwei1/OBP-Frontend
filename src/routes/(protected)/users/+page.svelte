@@ -180,7 +180,7 @@
   {/if}
 
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-3xl font-bold">Users</h1>
+    <h1 class="text-3xl font-bold">Search Users</h1>
     <a
       href="/user-invitations"
       class="btn btn-secondary flex items-center gap-2"
@@ -192,19 +192,6 @@
 
   <!-- Smart Search Panel -->
   <div class="panel mb-6">
-    <div class="panel-header">
-      <h2 class="panel-title">Search Users</h2>
-      <div class="panel-subtitle">
-        Smart search: Enter email, user ID (UUID), or username
-        {#if searchType === "email"}
-          <span class="text-blue-600"> (Detected: Email)</span>
-        {:else if searchType === "userid"}
-          <span class="text-blue-600"> (Detected: User ID)</span>
-        {:else if searchType === "username"}
-          <span class="text-blue-600"> (Detected: Username)</span>
-        {/if}
-      </div>
-    </div>
     <div class="panel-content">
       <form
         onsubmit={(e) => {

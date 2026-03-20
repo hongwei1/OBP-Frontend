@@ -35,6 +35,7 @@ import {
   Map,
   Radio,
   FileSignature,
+  Search,
 } from "@lucide/svelte";
 import { env } from "$env/dynamic/public";
 
@@ -520,6 +521,28 @@ export function getActiveProductsMenuItem(pathname: string) {
   return found || productsItems[0];
 }
 
+// Users navigation items
+function buildUsersItems(): NavigationItem[] {
+  const items: NavigationItem[] = [
+    { href: "/users", label: "Search", iconComponent: Search },
+  ];
+
+  return items;
+}
+
+export const usersItems = buildUsersItems();
+
+export function getActiveUsersMenuItem(pathname: string) {
+  const found = usersItems.find((item) => {
+    if (item.external) {
+      return false;
+    }
+    return pathname.startsWith(item.href);
+  });
+
+  return found || usersItems[0];
+}
+
 // ABAC navigation items
 function buildAbacItems(): NavigationItem[] {
   const items: NavigationItem[] = [
@@ -594,6 +617,7 @@ export const navSections: NavigationSection[] = [
   { id: "financial-products", label: "Financial Products", iconComponent: Banknote, items: financialProductsItems, basePaths: ["/products/financial", "/products/collections"] },
   { id: "rbac", label: "RBAC", iconComponent: Shield, items: rbacItems, basePaths: ["/rbac"] },
   { id: "banks", label: "Banks", iconComponent: Building2, items: banksItems, basePaths: ["/banks"] },
+  { id: "users", label: "Users", iconComponent: Users, items: usersItems, basePaths: ["/users"] },
   { id: "customers", label: "Customers", iconComponent: Users, items: customersItems, basePaths: ["/customers"] },
   { id: "account-access", label: "Account Access", iconComponent: Landmark, items: accountAccessItems, basePaths: ["/account-access", "/mandates"] },
   { id: "dynamic-entities", label: "Dynamic Entities", iconComponent: Box, items: dynamicEntitiesItems, basePaths: ["/dynamic-entities"] },

@@ -2,7 +2,7 @@
   import { currentBank } from "$lib/stores/currentBank.svelte";
   import { enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
-  import { Building2, Globe, KeyRound, Plus, ChevronDown, Check, X } from "@lucide/svelte";
+  import { Building2, Globe, KeyRound, Plus, ChevronDown, Check, X, Box, AppWindow } from "@lucide/svelte";
   import RoleSearchWidget from "$lib/components/RoleSearchWidget.svelte";
 
   const { data, form } = $props();
@@ -105,9 +105,24 @@
     };
   }
 
-  // Split user's existing entitlements into system-wide and bank-level
-  let systemEntitlements = $derived(
+  // Consumer scopes from the current application
+  let consumerScopes = $derived(data.consumerScopes);
+
+  // Categorisation helpers
+  function isDynamicEntityRole(name: string) {
+    return name.includes("DynamicEntity");
+  }
+  // Split user's existing entitlements into categories
+  let allSystemEntitlements = $derived(
     userEntitlements.filter((e: any) => !e.bank_id),
+  );
+
+  let systemEntitlements = $derived(
+    allSystemEntitlements.filter((e: any) => !isDynamicEntityRole(e.role_name)),
+  );
+
+  let dynamicEntityEntitlements = $derived(
+    allSystemEntitlements.filter((e: any) => isDynamicEntityRole(e.role_name)),
   );
 
   let bankEntitlements = $derived(
@@ -334,6 +349,69 @@
       </p>
     {/if}
   </div>
+</div>
+
+<!-- Dynamic Entity Roles -->
+<div class="section mb-6">
+    <div class="section-header">
+      <Box size={18} />
+      <h3 class="section-title">Dynamic Entity Roles</h3>
+      <span class="section-count">{dynamicEntityEntitlements.length}</span>
+    </div>
+
+    {#if dynamicEntityEntitlements.length > 0}
+      <ul class="role-list">
+        {#each dynamicEntityEntitlements as row}
+          <li class="role-item">
+            <span class="role-name">{row.role_name}</span>
+            <button
+              class="copy-btn"
+              onclick={() =>
+                copyToClipboard(row.role_name, row.entitlement_id, row.bank_id, row.entitlement_id)}
+              title="Copy entitlement details"
+            >
+              {#if copiedId === row.entitlement_id}
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              {:else}
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              {/if}
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {:else}
+      <p class="empty-text">No dynamic entity roles</p>
+    {/if}
+</div>
+
+<!-- Consumer Scopes -->
+<div class="section mb-6">
+  <div class="section-header">
+    <AppWindow size={18} />
+    <h3 class="section-title">This Consumer Has Scopes{consumerScopes?.app_name ? `: ${consumerScopes.app_name}` : ""}</h3>
+    <span class="section-count">{consumerScopes?.scopes?.length ?? 0}</span>
+  </div>
+
+  {#if consumerScopes?.scopes && consumerScopes.scopes.length > 0}
+    <ul class="role-list">
+      {#each consumerScopes.scopes as scope}
+        <li class="role-item">
+          <span class="role-name">{scope.role_name}</span>
+          {#if scope.bank_id}
+            <span class="scope-bank-badge">{scope.bank_id}</span>
+          {:else}
+            <span class="scope-bank-badge scope-bank-badge--system">System</span>
+          {/if}
+        </li>
+      {/each}
+    </ul>
+  {:else}
+    <p class="empty-text">No scopes assigned to the current application</p>
+  {/if}
 </div>
 
 <style>
@@ -739,5 +817,31 @@
     background: rgba(14, 165, 233, 0.1);
     border-color: rgba(14, 165, 233, 0.3);
     color: rgb(var(--color-primary-300));
+  }
+
+  .scope-bank-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    background: #dbeafe;
+    color: #1e40af;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+
+  .scope-bank-badge--system {
+    background: #f3e8ff;
+    color: #6b21a8;
+  }
+
+  :global([data-mode="dark"]) .scope-bank-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: rgb(var(--color-primary-300));
+  }
+
+  :global([data-mode="dark"]) .scope-bank-badge--system {
+    background: rgba(147, 51, 234, 0.15);
+    color: rgb(var(--color-tertiary-300, #c084fc));
   }
 </style>

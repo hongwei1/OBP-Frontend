@@ -46,14 +46,32 @@ export async function load({ locals }) {
         }
     }
 
+    async function getConsumerScopes(): Promise<{ consumer_id: string; app_name: string; scopes: Array<{ scope_id: string; role_name: string; bank_id: string }> } | null> {
+        try {
+            const consumer = await obp_requests.get('/obp/v6.0.0/consumers/current', accessToken);
+            if (!consumer?.consumer_id) return null;
+            const scopesResponse = await obp_requests.get(`/obp/v4.0.0/consumers/${consumer.consumer_id}/scopes`, accessToken);
+            return {
+                consumer_id: consumer.consumer_id,
+                app_name: consumer.app_name || '',
+                scopes: scopesResponse?.list || [],
+            };
+        } catch (e) {
+            logger.error('Error fetching consumer scopes:', e);
+            return null;
+        }
+    }
+
     const allBanks = await getAllBanks();
     const allAvailableEntitlements = await getAllAvalilableEntitlements();
     const userEntitlements = await getUserEntitlements();
+    const consumerScopes = await getConsumerScopes();
 
     return {
         allAvailableEntitlements,
         userEntitlements,
-        allBanks
+        allBanks,
+        consumerScopes,
     }
 }
 
