@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '$shared/utils/logger';
 const logger = createLogger('OAuth2Client');
 import { OAuth2Client } from 'arctic';
 import type { OpenIdConnectConfiguration, OAuth2AccessTokenPayload } from './types';

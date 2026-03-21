@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ToolMessage } from '$lib/opey/types';
+    import type { ToolMessage } from '$shared/opey/types';
     import { ToolError, ObpApiResponse, DefaultToolResponse } from '.';
     import {
         Check,

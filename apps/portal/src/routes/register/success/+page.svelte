@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Copy, Check } from '@lucide/svelte';
-    import { createLogger } from '$lib/utils/logger';
+    import { createLogger } from '@obp/shared/utils';
     
     const logger = createLogger('UserRegisterSuccessPage');
     const { data } = $props()

@@ -8,10 +8,9 @@
 	},
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build && npm run prepack",
+		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"prepack": "svelte-kit sync && svelte-package && publint",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check .",
@@ -19,77 +18,72 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
 	},
-	"files": [
-		"dist",
-		"!dist/**/*.test.*",
-		"!dist/**/*.spec.*"
-	],
 	"sideEffects": [
 		"**/*.css"
 	],
-	"svelte": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"svelte": "./src/lib/index.ts",
+	"types": "./src/lib/index.ts",
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"svelte": "./dist/index.js"
+			"types": "./src/lib/index.ts",
+			"svelte": "./src/lib/index.ts"
 		},
 		"./components": {
-			"types": "./dist/components/index.d.ts",
-			"svelte": "./dist/components/index.js"
+			"types": "./src/lib/components/index.ts",
+			"svelte": "./src/lib/components/index.ts"
 		},
 		"./opey": {
-			"types": "./dist/opey/index.d.ts",
-			"svelte": "./dist/opey/index.js"
+			"types": "./src/lib/opey/index.ts",
+			"svelte": "./src/lib/opey/index.ts"
 		},
 		"./obp": {
-			"types": "./dist/obp/index.d.ts",
-			"svelte": "./dist/obp/index.js"
+			"types": "./src/lib/obp/index.ts",
+			"svelte": "./src/lib/obp/index.ts"
 		},
 		"./utils": {
-			"types": "./dist/utils/index.d.ts",
-			"svelte": "./dist/utils/index.js"
+			"types": "./src/lib/utils/index.ts",
+			"svelte": "./src/lib/utils/index.ts"
 		},
 		"./stores": {
-			"types": "./dist/stores/index.d.ts",
-			"svelte": "./dist/stores/index.js"
+			"types": "./src/lib/stores/index.ts",
+			"svelte": "./src/lib/stores/index.ts"
 		},
 		"./health-check": {
-			"types": "./dist/health-check/index.d.ts",
-			"svelte": "./dist/health-check/index.js"
+			"types": "./src/lib/health-check/index.ts",
+			"svelte": "./src/lib/health-check/index.ts"
 		},
 		"./markdown": {
-			"types": "./dist/markdown/index.d.ts",
-			"svelte": "./dist/markdown/index.js"
+			"types": "./src/lib/markdown/index.ts",
+			"svelte": "./src/lib/markdown/index.ts"
 		},
 		"./config": {
-			"types": "./dist/config/index.d.ts",
-			"svelte": "./dist/config/index.js"
+			"types": "./src/lib/config/index.ts",
+			"svelte": "./src/lib/config/index.ts"
 		},
 		"./server": {
-			"types": "./dist/server/index.d.ts",
-			"default": "./dist/server/index.js"
+			"types": "./src/lib/server/index.ts",
+			"default": "./src/lib/server/index.ts"
 		},
 		"./server/oauth": {
-			"types": "./dist/server/oauth/index.d.ts",
-			"default": "./dist/server/oauth/index.js"
+			"types": "./src/lib/server/oauth/index.ts",
+			"default": "./src/lib/server/oauth/index.ts"
 		},
 		"./server/redis": {
-			"types": "./dist/server/redis/index.d.ts",
-			"default": "./dist/server/redis/index.js"
+			"types": "./src/lib/server/redis/index.ts",
+			"default": "./src/lib/server/redis/index.ts"
 		},
 		"./server/health-check": {
-			"types": "./dist/server/health-check/index.d.ts",
-			"default": "./dist/server/health-check/index.js"
+			"types": "./src/lib/server/health-check/index.ts",
+			"default": "./src/lib/server/health-check/index.ts"
 		},
 		"./server/obp": {
-			"types": "./dist/server/obp/index.d.ts",
-			"default": "./dist/server/obp/index.js"
+			"types": "./src/lib/server/obp/index.ts",
+			"default": "./src/lib/server/obp/index.ts"
 		},
 		"./server/opey": {
-			"types": "./dist/server/opey/index.d.ts",
-			"default": "./dist/server/opey/index.js"
+			"types": "./src/lib/server/opey/index.ts",
+			"default": "./src/lib/server/opey/index.ts"
 		}
 	},
 	"dependencies": {
@@ -110,7 +104,6 @@
 		"@sveltejs/adapter-auto": "^6.0.0",
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.16.0",
-		"@sveltejs/package": "^2.5.7",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/forms": "^0.5.9",
 		"@tailwindcss/typography": "^0.5.15",
@@ -125,7 +118,6 @@
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
-		"publint": "^0.3.17",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { ToolMessage } from '$lib/opey/types';
-    import { toast } from '$lib/utils/toastService';
+    import type { ToolMessage } from '$shared/opey/types';
+    import { toast } from '$shared/utils/toastService';
     import { Copy, CheckCircle, AlertTriangle } from '@lucide/svelte';
 
     let { message }: { message: ToolMessage } = $props();

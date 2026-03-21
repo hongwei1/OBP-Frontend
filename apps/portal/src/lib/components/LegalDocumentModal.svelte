@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import { renderMarkdown } from '$lib/markdown/helper-funcs';
+	import { renderMarkdown } from '@obp/shared/markdown';
 	import { getLegalMarkdownFromWebUIProps } from '$lib/utils/loadLegalDocumentFromApi';
-	import { createLogger } from '$lib/utils/logger';
+	import { createLogger } from '@obp/shared/utils';
 	import { Dialog } from 'bits-ui';
 	const logger = createLogger('LegalDocumentModal');
 

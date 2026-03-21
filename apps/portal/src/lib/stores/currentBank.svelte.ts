@@ -1,5 +1,5 @@
 import { browser } from "$app/environment";
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 import type { OBPBank } from "$lib/obp/types";
 
 const logger = createLogger("CurrentBank");

@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '$shared/utils/logger';
 const logger = createLogger('ChatState');
 import type { BaseMessage, ToolMessage } from '../types';
 

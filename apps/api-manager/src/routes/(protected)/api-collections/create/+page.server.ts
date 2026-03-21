@@ -1,6 +1,6 @@
 import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 
 const logger = createLogger("CreateApiCollectionPageServer");

@@ -1,9 +1,9 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('AddUserAuthContextUpdateRequest');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { redirect, isRedirect } from '@sveltejs/kit';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 
 export async function load(event: RequestEvent) {
 	const bankId = event.url.searchParams.get('BANK_ID');

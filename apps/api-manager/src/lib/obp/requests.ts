@@ -1,7 +1,7 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 const logger = createLogger("OBPRequests");
 import { env } from "$env/dynamic/public";
-import { OBPErrorBase, OBPRequestError } from "$lib/obp/errors";
+import { OBPErrorBase, OBPRequestError } from '$lib/obp/errors';
 
 /**
  * Extract error details from OBP API response data.

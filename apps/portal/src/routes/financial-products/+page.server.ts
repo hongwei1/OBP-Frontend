@@ -1,10 +1,10 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('FinancialProductsServer');
 
 import type { RequestEvent } from '@sveltejs/kit';
 import type { OBPProduct } from '$lib/obp/types';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError, OBPRateLimitError, OBPTimeoutError } from '$lib/obp/errors';
+import { OBPRequestError, OBPRateLimitError, OBPTimeoutError } from '@obp/shared/obp';
 import { env } from '$env/dynamic/private';
 
 const API_VERSION = 'v6.0.0';

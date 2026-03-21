@@ -1,10 +1,10 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('UserConsentsServer');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import type { OBPConsent } from '$lib/obp/types';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 import { env } from '$env/dynamic/private';
 
 const displayConsent = (consent: OBPConsent): boolean => {

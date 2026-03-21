@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { APIProductDetails } from "$lib/obp/types";
+    import type { APIProductDetails } from "$shared/obp/types";
     import { Zap, Check } from '@lucide/svelte';
 
     interface Props {

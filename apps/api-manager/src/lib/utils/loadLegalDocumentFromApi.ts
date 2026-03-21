@@ -1,4 +1,4 @@
-import { createLogger } from './logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('LegalDocLoader');
 import { obp_requests } from "$lib/obp/requests";
 

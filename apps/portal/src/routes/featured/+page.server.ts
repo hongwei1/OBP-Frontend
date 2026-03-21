@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('FeaturedEndpointsServer');
 
 function logDebug(message: string) {
@@ -7,7 +7,7 @@ function logDebug(message: string) {
 import type { RequestEvent } from '@sveltejs/kit';
 import type { OBPApiCollectionsResponse, OBPApiCollectionEndpointsResponse } from '$lib/obp/types';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError, OBPErrorBase } from '$lib/obp/errors';
+import { OBPRequestError, OBPErrorBase } from '@obp/shared/obp';
 import { env } from '$env/dynamic/private';
 
 const API_VERSION = 'v6.0.0';

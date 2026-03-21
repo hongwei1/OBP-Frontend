@@ -1,4 +1,4 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 import { obp_requests } from "$lib/obp/requests";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { RequestEvent } from "@sveltejs/kit";

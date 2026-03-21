@@ -1,8 +1,8 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 const logger = createLogger("UnlockUserPageServer");
 import type { PageServerLoad } from "./$types";
 import { obp_requests } from "$lib/obp/requests";
-import { extractErrorDetails } from "$lib/obp/errors";
+import { extractErrorDetails } from '$lib/obp/errors';
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { RequestEvent } from "@sveltejs/kit";

@@ -1,4 +1,4 @@
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '@obp/shared/utils';
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
 

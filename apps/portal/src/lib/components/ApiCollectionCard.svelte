@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { OBPApiCollection } from "$lib/obp/types";
-    import { toast } from "$lib/utils/toastService";
+    import { toast } from "@obp/shared/utils";
 
     interface Props {
         collection: OBPApiCollection;

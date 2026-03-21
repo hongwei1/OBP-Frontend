@@ -1,4 +1,4 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 import { obp_requests } from "$lib/obp/requests";
 
 const logger = createLogger("ResourceDocsCache");

@@ -1,4 +1,4 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 const logger = createLogger("OBPLoginCallback");
 import { oauth2ProviderFactory } from "$lib/oauth/providerFactory";
 import type { OAuth2Tokens } from "arctic";

@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '$shared/utils/logger';
 const logger = createLogger('MarkdownHelper');
 import MarkdownIt from "markdown-it";
 

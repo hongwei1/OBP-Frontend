@@ -1,4 +1,4 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 const logger = createLogger("CreateEntitlementPageServer");
 import type { PageServerLoad } from "./$types";
 import { obp_requests } from "$lib/obp/requests";

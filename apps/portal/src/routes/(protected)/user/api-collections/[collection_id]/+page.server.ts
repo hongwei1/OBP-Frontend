@@ -1,10 +1,10 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('UserApiCollectionDetailServer');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { error, fail } from '@sveltejs/kit';
 import type { OBPApiCollection, OBPApiCollectionEndpointsResponse, OBPApiCollectionsResponse } from '$lib/obp/types';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 import { env } from '$env/dynamic/private';
 import { getOperationIds } from '$lib/obp/operationIdsCache';
 

@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('ConsentScreen');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 

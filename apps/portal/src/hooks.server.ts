@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('HooksServer');
 import type { Handle } from '@sveltejs/kit';
 import { error, redirect } from '@sveltejs/kit';
@@ -10,7 +10,7 @@ import { env } from '$env/dynamic/private';
 import { obp_requests } from '$lib/obp/requests';
 import { oauth2ProviderManager } from '$lib/oauth/providerManager';
 import { SessionOAuthHelper } from '$lib/oauth/sessionHelper';
-import { healthCheckRegistry } from '$lib/health-check/HealthCheckRegistry';
+import { healthCheckRegistry } from '@obp/shared/health-check';
 import { PUBLIC_OBP_BASE_URL } from '$env/static/public';
 
 import { redisService } from '$lib/redis/services/RedisService';

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { healthCheckRegistry } from '$lib/health-check/HealthCheckRegistry';
+import { healthCheckRegistry } from '@obp/shared/health-check';
 import { get } from 'svelte/store';
 
 export const GET: RequestHandler = async () => {

@@ -1,7 +1,7 @@
 import { type SessionData } from 'svelte-kit-sessions';
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 import { fail } from '@sveltejs/kit';
 
 const logger = createLogger('user/entitlements/+page.server');

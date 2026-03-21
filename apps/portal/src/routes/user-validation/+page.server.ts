@@ -1,8 +1,8 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('UserValidationServer');
 import type { ServerLoad } from '@sveltejs/kit';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 
 export const load: ServerLoad = async ({ url }) => {
 	const token = url.searchParams.get('token');

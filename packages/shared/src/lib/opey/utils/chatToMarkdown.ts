@@ -1,4 +1,4 @@
-import type { BaseMessage, AssistantMessage, ToolMessage } from '$lib/opey/types';
+import type { BaseMessage, AssistantMessage, ToolMessage } from '$shared/opey/types';
 
 function getToolDisplayName(toolName: string): string {
 	switch (toolName) {

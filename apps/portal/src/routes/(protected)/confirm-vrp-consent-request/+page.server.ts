@@ -1,9 +1,9 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('ConfirmVRPConsentRequest');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { redirect, isRedirect } from '@sveltejs/kit';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 
 export async function load(event: RequestEvent) {
 	const consentRequestId = event.url.searchParams.get('CONSENT_REQUEST_ID');

@@ -1,6 +1,6 @@
-import { createLogger } from '$lib/utils/logger';
-import type { RedisService } from '$lib/server/redis/RedisService';
-import type { OBPRequests } from '$lib/obp/requests';
+import { createLogger } from '$shared/utils/logger';
+import type { RedisService } from '$shared/server/redis/RedisService';
+import type { OBPRequests } from '$shared/obp/requests';
 
 const logger = createLogger('OperationIdsCache');
 

@@ -1,4 +1,4 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 const logger = createLogger("HooksServer");
 import type { Handle } from "@sveltejs/kit";
 import { error } from "@sveltejs/kit";
@@ -11,7 +11,7 @@ import { PUBLIC_OBP_BASE_URL } from "$env/static/public";
 import { oauth2ProviderManager } from "$lib/oauth/providerManager";
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import { resourceDocsCache } from "$lib/stores/resourceDocsCache";
-import { healthCheckRegistry } from "$lib/health-check/HealthCheckRegistry";
+import { healthCheckRegistry } from "@obp/shared/health-check";
 import { ensureOpeyNotebook } from "$lib/server/opey/opeyNotebook";
 
 declare const process: { env: Record<string, string | undefined>; argv: string[] };

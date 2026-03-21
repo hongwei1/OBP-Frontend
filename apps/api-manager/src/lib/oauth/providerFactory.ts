@@ -1,4 +1,4 @@
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 const logger = createLogger("OAuthProviderFactory");
 import { OAuth2ClientWithConfig } from "./client";
 import { env } from "$env/dynamic/private";

@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '$shared/utils/logger';
 import Redis, { type RedisOptions } from 'ioredis';
 
 const logger = createLogger('RedisService');

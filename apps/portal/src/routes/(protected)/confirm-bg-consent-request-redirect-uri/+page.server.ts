@@ -1,8 +1,8 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('ConfirmBGConsentRequestRedirectURI');
 import type { RequestEvent } from '@sveltejs/kit';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 
 function decodeJwtPayload(jwt: string): any {
 	try {

@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '$shared/utils/logger';
 const logger = createLogger('ChatController');
 import type { ChatService, StreamEvent } from '../services/ChatService';
 import type { ToolMessage, UserMessage } from '../types';

@@ -1,8 +1,8 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('UserInvitationServer');
 import { type Actions, redirect, error } from "@sveltejs/kit";
 import { obp_requests } from "$lib/obp/requests";
-import { OBPRequestError } from "$lib/obp/errors";
+import { OBPRequestError } from "@obp/shared/obp";
 import type { PageServerLoad } from './$types';
 import type { OBPUserInvitation, OBPUserInvitationValidateRequestBody, OBPUserInvitationAcceptRequestBody } from "$lib/obp/types";
 import { env } from '$env/dynamic/public';

@@ -1,5 +1,5 @@
 import { obp_requests } from "$lib/obp/requests";
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 import { oauth2ProviderFactory } from "$lib/oauth/providerFactory";
 import { env } from "$env/dynamic/private";
 

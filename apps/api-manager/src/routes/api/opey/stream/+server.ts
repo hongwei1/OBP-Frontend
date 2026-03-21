@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('OpeyStreamProxy');
 import type { RequestEvent } from './$types';
 import { env } from '$env/dynamic/private';

@@ -1,6 +1,6 @@
 <script lang="ts">
-    import type { OBPConsent } from "$lib/obp/types";
-    import { toast } from "$lib/utils/toastService";
+    import type { OBPConsent } from "$shared/obp/types";
+    import { toast } from "$shared/utils/toastService";
 
     interface Props {
         consent: OBPConsent;

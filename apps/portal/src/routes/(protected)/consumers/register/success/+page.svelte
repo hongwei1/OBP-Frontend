@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createLogger } from '$lib/utils/logger';
+    import { createLogger } from '@obp/shared/utils';
     const logger = createLogger('ConsumerRegisterSuccessPage');
     const { data } = $props()
     const consumerData = data.consumerData || {};

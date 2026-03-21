@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Toast } from '@skeletonlabs/skeleton-svelte';
-    import { toaster } from '$lib/utils/toastService';
+    import { toaster } from '$shared/utils/toastService';
 </script>
 
 <Toast.Group {toaster}>

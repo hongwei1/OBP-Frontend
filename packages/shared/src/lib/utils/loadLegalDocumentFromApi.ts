@@ -1,6 +1,6 @@
 import { createLogger } from './logger';
 const logger = createLogger('LegalDocLoader');
-import type { OBPRequests } from '$lib/obp/requests';
+import type { OBPRequests } from '$shared/obp/requests';
 
 /**
  * Fetches raw Markdown content from the OBP webui-props endpoint.

@@ -1,8 +1,8 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('OTPValidation');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError } from '$lib/obp/errors';
+import { OBPRequestError } from '@obp/shared/obp';
 
 export async function load(event: RequestEvent) {
 	const flow = event.url.searchParams.get('flow');

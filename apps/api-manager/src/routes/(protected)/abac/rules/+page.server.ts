@@ -2,7 +2,7 @@ import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import { obp_requests } from "$lib/obp/requests";
-import { createLogger } from "$lib/utils/logger";
+import { createLogger } from "@obp/shared/utils";
 
 const logger = createLogger("AbacPoliciesServer");
 

@@ -1,11 +1,11 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('ProductDetailServer');
 
 import type { RequestEvent } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 import type { OBPProduct, APIProductDetails, OBPApiCollectionEndpointsResponse } from '$lib/obp/types';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPErrorBase, OBPRateLimitError, OBPTimeoutError } from '$lib/obp/errors';
+import { OBPErrorBase, OBPRateLimitError, OBPTimeoutError } from '@obp/shared/obp';
 import { env } from '$env/dynamic/private';
 
 const API_VERSION = 'v6.0.0';

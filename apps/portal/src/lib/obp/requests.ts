@@ -1,7 +1,7 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('OBPRequests');
 import { env } from '$env/dynamic/public';
-import { OBPErrorBase, OBPRequestError, OBPRateLimitError, OBPTimeoutError } from '$lib/obp/errors';
+import { OBPErrorBase, OBPRequestError, OBPRateLimitError, OBPTimeoutError } from '@obp/shared/obp';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 

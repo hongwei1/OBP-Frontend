@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { ToolMessage } from '$lib/opey/types';
+	import type { ToolMessage } from '$shared/opey/types';
 	import { XCircle, AlertTriangle, Copy } from '@lucide/svelte';
-	import { toast } from '$lib/utils/toastService';
+	import { toast } from '$shared/utils/toastService';
 
 	let { message }: { message: ToolMessage } = $props();
 

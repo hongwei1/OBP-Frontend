@@ -1,11 +1,11 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('CheckoutServer');
 
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { OBPProduct, APIProductDetails, OBPAccountApplication } from '$lib/obp/types';
 import { obp_requests } from '$lib/obp/requests';
-import { OBPRequestError, OBPErrorBase } from '$lib/obp/errors';
+import { OBPRequestError, OBPErrorBase } from '@obp/shared/obp';
 import { env } from '$env/dynamic/private';
 
 const API_VERSION = 'v6.0.0';

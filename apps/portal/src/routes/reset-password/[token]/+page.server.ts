@@ -1,9 +1,9 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('PasswordResetServer');
 import { type Actions, redirect } from "@sveltejs/kit";
 import { obp_requests } from "$lib/obp/requests";
 import type { OBPPasswordResetRequestBody } from "$lib/obp/types";
-import { OBPRequestError } from "$lib/obp/errors";
+import { OBPRequestError } from "@obp/shared/obp";
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {

@@ -2,7 +2,7 @@
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 	import { type SessionData } from 'svelte-kit-sessions';
 	import ConsentCard from '$lib/components/ConsentCard.svelte';
-	import { toast } from '$lib/utils/toastService.js';
+	import { toast } from '@obp/shared/utils';
 	import { currentBank } from '$lib/stores/currentBank.svelte';
 	import { onMount } from 'svelte';
 

@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('OBPLogin');
 import { oauth2ProviderFactory } from '$lib/oauth/providerFactory';
 import type { RequestEvent } from '@sveltejs/kit';

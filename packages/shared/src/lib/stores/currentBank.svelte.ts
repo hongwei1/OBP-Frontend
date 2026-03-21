@@ -1,6 +1,6 @@
 const browser = typeof window !== 'undefined';
-import { createLogger } from "$lib/utils/logger";
-import type { OBPBank } from "$lib/obp/types";
+import { createLogger } from "$shared/utils/logger";
+import type { OBPBank } from "$shared/obp/types";
 
 const logger = createLogger("CurrentBank");
 

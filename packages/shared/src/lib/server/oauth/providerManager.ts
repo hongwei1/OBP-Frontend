@@ -1,5 +1,5 @@
-import { createLogger } from '$lib/utils/logger';
-import type { OBPRequests } from '$lib/obp/requests';
+import { createLogger } from '$shared/utils/logger';
+import type { OBPRequests } from '$shared/obp/requests';
 import { type OAuth2ProviderFactory, type WellKnownUri } from './providerFactory';
 
 const logger = createLogger('OAuthProviderManager');

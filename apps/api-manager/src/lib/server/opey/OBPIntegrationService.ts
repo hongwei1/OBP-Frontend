@@ -1,6 +1,6 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('OBPIntegrationService');
-import { extractUsernameFromJWT } from '$lib/utils/jwt';
+import { extractUsernameFromJWT } from '@obp/shared/utils';
 import type { Session } from 'svelte-kit-sessions';
 import { obp_requests } from '$lib/obp/requests';
 import type { OBPConsent, OBPConsentInfo } from '$lib/obp/types';

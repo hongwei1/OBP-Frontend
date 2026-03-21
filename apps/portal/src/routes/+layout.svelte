@@ -4,7 +4,7 @@
 	import { myAccountItems } from '$lib/config/navigation';
 	import Toast from '$lib/components/Toast.svelte';
 	import WelcomeBubble from '$lib/components/WelcomeBubble.svelte';
-	import NavigationSidebar from '$lib/components/NavigationSidebar.svelte';
+	import { NavigationSidebar } from '@obp/shared/components';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	// Lucide Icons (used for building menuItems)

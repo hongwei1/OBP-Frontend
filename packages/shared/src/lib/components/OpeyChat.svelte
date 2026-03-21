@@ -2,27 +2,27 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { ShieldUserIcon } from '@lucide/svelte';
 	import { Tooltip, Dialog, Portal, Menu } from '@skeletonlabs/skeleton-svelte';
-	import { createLogger } from '$lib/utils/logger';
+	import { createLogger } from '$shared/utils/logger';
 
 	const logger = createLogger('OpeyChat');
 
-	import { CookieAuthStrategy } from '$lib/opey/services/AuthStrategy';
-	import { ChatState, type ChatStateSnapshot } from '$lib/opey/state/ChatState';
-	import { RestChatService } from '$lib/opey/services/RestChatService';
-	import { ChatController } from '$lib/opey/controllers/ChatController';
-	import { SessionState, type SessionSnapshot } from '$lib/opey/state/SessionState';
-	import { OpeySessionService } from '$lib/opey/services/OpeySessionService';
-	import { SessionController } from '$lib/opey/controllers/SessionController';
-	import type { ToolMessage } from '$lib/opey/types';
-	import type { OBPConsentInfo } from '$lib/obp/types';
-	import { healthCheckRegistry } from '$lib/health-check/HealthCheckRegistry';
+	import { CookieAuthStrategy } from '$shared/opey/services/AuthStrategy';
+	import { ChatState, type ChatStateSnapshot } from '$shared/opey/state/ChatState';
+	import { RestChatService } from '$shared/opey/services/RestChatService';
+	import { ChatController } from '$shared/opey/controllers/ChatController';
+	import { SessionState, type SessionSnapshot } from '$shared/opey/state/SessionState';
+	import { OpeySessionService } from '$shared/opey/services/OpeySessionService';
+	import { SessionController } from '$shared/opey/controllers/SessionController';
+	import type { ToolMessage } from '$shared/opey/types';
+	import type { OBPConsentInfo } from '$shared/obp/types';
+	import { healthCheckRegistry } from '$shared/health-check/HealthCheckRegistry';
 
 	// Import other components
 	import { ToolError, ObpApiResponse, DefaultToolResponse } from './tool-messages';
 	import ChatMessage from './ChatMessage.svelte';
 	import { CircleArrowUp, StopCircle, Copy, type Icon as IconType } from '@lucide/svelte';
-	import { chatToMarkdown } from '$lib/opey/utils/chatToMarkdown';
-	import { toast } from '$lib/utils/toastService';
+	import { chatToMarkdown } from '$shared/opey/utils/chatToMarkdown';
+	import { toast } from '$shared/utils/toastService';
 	import type { Snippet } from 'svelte';
 
 	// Interface for chat options

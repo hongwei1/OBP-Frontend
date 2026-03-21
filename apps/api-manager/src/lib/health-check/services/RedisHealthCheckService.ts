@@ -1,7 +1,6 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 import { redisService } from '$lib/redis/services/RedisService';
-import { HealthCheckState } from '../state/HealthCheckState';
-import { type HealthCheckOptions, HealthCheckService } from './HealthCheckService';
+import { HealthCheckService, type HealthCheckOptions } from '@obp/shared/health-check';
 
 const logger = createLogger('RedisHealthCheckService');
 

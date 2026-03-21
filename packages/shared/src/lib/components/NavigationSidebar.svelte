@@ -5,8 +5,8 @@
 		User,
 		ChevronDown
 	} from '@lucide/svelte';
-	import LightSwitch from '$lib/components/LightSwitch.svelte';
-	import type { NavigationItem, NavigationSection } from '$lib/config/navigation';
+	import LightSwitch from '$shared/components/LightSwitch.svelte';
+	import type { NavigationItem, NavigationSection } from '$shared/config/navigation';
 
 	interface FooterLink {
 		href: string;
@@ -107,7 +107,7 @@
 	}
 </script>
 
-<div class="relative h-full overflow-hidden">
+<div class="relative h-full overflow-visible">
 	{#if isNavExpanded}
 		<button
 			type="button"

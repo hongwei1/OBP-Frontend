@@ -1,5 +1,5 @@
 import { type SessionData } from 'svelte-kit-sessions';
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 import { obp_requests } from '$lib/obp/requests';
 import { fail } from '@sveltejs/kit';
 

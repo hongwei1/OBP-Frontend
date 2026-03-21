@@ -12,7 +12,7 @@
   import ApiActivityIndicator from "$lib/components/ApiActivityIndicator.svelte";
   import OpeyInsightBar from "$lib/components/OpeyInsightBar.svelte";
   import { describeRoute } from "$lib/config/insightMessages";
-  import { createLogger } from "$lib/utils/logger";
+  import { createLogger } from "@obp/shared/utils";
   import { resourceDocsCache } from "$lib/stores/resourceDocsCache";
   import { currentBank } from "$lib/stores/currentBank.svelte";
   import { userPreferences } from "$lib/stores/userPreferences.svelte";

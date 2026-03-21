@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('UserConsentsServer');
 import type { RequestEvent, Actions } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';

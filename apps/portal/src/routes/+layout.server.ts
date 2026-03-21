@@ -1,4 +1,4 @@
-import { createLogger } from '$lib/utils/logger';
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('LayoutServer');
 import type { RequestEvent } from "@sveltejs/kit";
 import { obp_requests } from '$lib/obp/requests';

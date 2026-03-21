@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { Avatar } from '@skeletonlabs/skeleton-svelte';
-	import { renderMarkdown } from '$lib/markdown/helper-funcs';
-	import type { BaseMessage, ToolMessage as ToolMessageType } from '$lib/opey/types';
+	import { renderMarkdown } from '$shared/markdown/helper-funcs';
+	import type { BaseMessage, ToolMessage as ToolMessageType } from '$shared/opey/types';
 	import { ToolMessage } from './tool-messages';
 	import { RotateCw, Copy, AlertTriangle } from '@lucide/svelte';
-	import { messageToMarkdown } from '$lib/opey/utils/chatToMarkdown';
-	import { toast } from '$lib/utils/toastService';
+	import { messageToMarkdown } from '$shared/opey/utils/chatToMarkdown';
+	import { toast } from '$shared/utils/toastService';
 
 	// Props
 	interface Props {

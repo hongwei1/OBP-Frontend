@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { ToolMessage } from '$lib/opey/types';
-	import { createLogger } from '$lib/utils/logger';
+	import type { ToolMessage } from '$shared/opey/types';
+	import { createLogger } from '$shared/utils/logger';
 	import { Shield, CheckCircle, XCircle, KeyRound, Loader2 } from '@lucide/svelte';
-	import { expandRoleRequirements, deduplicateRoles } from '$lib/opey/utils/roles';
+	import { expandRoleRequirements, deduplicateRoles } from '$shared/opey/utils/roles';
 
 	const logger = createLogger('ConsentRequestCard');
 
