@@ -57,6 +57,7 @@
   let isCountingDown = $state(false);
   let timestampColorIndex = $state(0);
   let showUrl = $state(false);
+  let filtersExpanded = $state(false);
 
   // Configuration information
   let obpInfo = $derived(configHelpers.getObpConnectionInfo());
@@ -372,32 +373,71 @@
 
   <!-- Panel 1: Query Interface -->
   <div class="panel full-width-panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Query Metrics</h2>
-      <div class="panel-subtitle">
-        Search and filter API metrics with custom parameters
+    <div class="panel-header-compact">
+      <div class="panel-header-row">
+        <h2 class="panel-title">Query Metrics</h2>
+        <div class="panel-meta header-fields">
+          <label class="hf"><span>From</span>
+            <input type="datetime-local" bind:value={queryForm.from_date} onblur={handleFieldChange} step="1" name="from_date" />
+          </label>
+          <label class="hf"><span>To</span>
+            <input type="datetime-local" bind:value={queryForm.to_date} onblur={handleFieldChange} step="1" name="to_date" />
+          </label>
+          <label class="hf hf-tiny"><span>Limit</span>
+            <input type="number" bind:value={queryForm.limit} min="1" max="10000" onblur={handleFieldChange} name="limit" />
+          </label>
+          <label class="hf hf-tiny"><span>Offset</span>
+            <input type="number" bind:value={queryForm.offset} min="0" onblur={handleFieldChange} name="offset" />
+          </label>
+          <label class="hf hf-sm"><span>Sort</span>
+            <select bind:value={queryForm.sort_by} onchange={handleFieldChange} name="sort_by">
+              <option value="date">Date</option>
+              <option value="url">URL</option>
+              <option value="user_name">User</option>
+              <option value="app_name">App</option>
+              <option value="verb">Method</option>
+              <option value="duration">Duration</option>
+            </select>
+          </label>
+          <label class="hf hf-xs"><span>Dir</span>
+            <select bind:value={queryForm.direction} onchange={handleFieldChange} name="direction">
+              <option value="desc">Desc</option>
+              <option value="asc">Asc</option>
+            </select>
+          </label>
+          <button
+            class="header-btn"
+            onclick={() => filtersExpanded = !filtersExpanded}
+            data-testid="filters-toggle"
+            data-state={filtersExpanded ? "expanded" : "collapsed"}
+          >
+            {filtersExpanded ? "▾" : "▸"} Filters
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="panel-content">
-      <!-- Query Form -->
-      <MetricsQueryForm
-        bind:queryForm
-        onFieldChange={handleFieldChange}
-        onClear={clearQuery}
-        onSubmit={submitQuery}
-        showAutoRefresh={false}
-        showClearButton={true}
-        showRefreshButton={false}
-      />
-    </div>
+    {#if filtersExpanded}
+      <div class="panel-content">
+        <MetricsQueryForm
+          bind:queryForm
+          bind:filtersExpanded
+          onFieldChange={handleFieldChange}
+          onClear={clearQuery}
+          onSubmit={submitQuery}
+          showAutoRefresh={false}
+          showClearButton={false}
+          showRefreshButton={false}
+        />
+      </div>
+    {/if}
   </div>
 
   <!-- Panel 2: API Metrics Results -->
   <div class="panel full-width-panel">
     <div class="panel-header-compact">
       <div class="panel-header-row">
-        <h2 class="panel-title">API Metrics Results</h2>
+        <h2 class="panel-title">API Metrics Results{#if metrics?.metrics && metrics.metrics.length > 0} <span class="panel-title-count">— {metrics.count} calls from {obpInfo.displayName}</span>{/if}</h2>
         <div class="panel-meta">
           <button
             class="url-toggle"
@@ -432,9 +472,6 @@
 
     <div class="panel-content">
       {#if metrics?.metrics && metrics.metrics.length > 0}
-        <div class="metrics-summary">
-          Showing {metrics.count} API calls from {obpInfo.displayName}
-        </div>
         <div class="table-wrapper">
           {#key data.lastUpdated}
             <table class="metrics-table">
@@ -509,10 +546,6 @@
               </tbody>
             </table>
           {/key}
-        </div>
-        <div class="metrics-summary">
-          Showing {metrics.count} API calls from
-          {obpInfo.displayName}
         </div>
       {:else if hasApiAccess}
         <div class="empty-state">
@@ -677,6 +710,100 @@
     color: var(--color-surface-400);
   }
 
+  .header-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    background: transparent;
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    color: var(--color-surface-600);
+    white-space: nowrap;
+  }
+
+  .header-btn:hover {
+    background: var(--color-surface-200);
+    color: var(--color-surface-800);
+  }
+
+  :global([data-mode="dark"]) .header-btn {
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-400);
+  }
+
+  :global([data-mode="dark"]) .header-btn:hover {
+    background: rgb(var(--color-surface-700));
+    color: var(--color-surface-200);
+  }
+
+  .header-fields {
+    flex-wrap: wrap;
+  }
+
+  .hf {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    cursor: default;
+  }
+
+  .hf span {
+    color: var(--color-surface-500);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  :global([data-mode="dark"]) .hf span {
+    color: var(--color-surface-400);
+  }
+
+  .hf input,
+  .hf select {
+    padding: 0.2rem 0.3rem;
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.2rem;
+    font-size: 0.8rem;
+    background: white;
+    color: var(--color-surface-900);
+    line-height: 1.2;
+  }
+
+  :global([data-mode="dark"]) .hf input,
+  :global([data-mode="dark"]) .hf select {
+    background: rgb(var(--color-surface-900));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-100);
+  }
+
+  .hf input:focus,
+  .hf select:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+  }
+
+  .hf input[type="datetime-local"] {
+    width: 11rem;
+  }
+
+  .hf input[type="number"] {
+    width: 3.5rem;
+  }
+
+  .hf-tiny input[type="number"] {
+    width: 3rem;
+  }
+
+  .hf-sm select {
+    width: 4.5rem;
+  }
+
+  .hf-xs select {
+    width: 3.5rem;
+  }
+
   .meta-separator {
     color: var(--color-surface-400);
   }
@@ -755,6 +882,16 @@
 
   :global([data-mode="dark"]) .panel-title {
     color: var(--color-surface-100);
+  }
+
+  .panel-title-count {
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--color-surface-500);
+  }
+
+  :global([data-mode="dark"]) .panel-title-count {
+    color: var(--color-surface-400);
   }
 
   .panel-subtitle {
