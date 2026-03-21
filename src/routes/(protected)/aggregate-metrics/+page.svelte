@@ -73,7 +73,7 @@
     direction: "desc",
     consumer_id: "",
     user_id: "",
-    user_name: "",
+    username: "",
     anon: "",
     url: "",
     app_name: "",
@@ -135,7 +135,7 @@
         direction: urlParams.get("direction") || "desc",
         consumer_id: urlParams.get("consumer_id") || "",
         user_id: urlParams.get("user_id") || "",
-        user_name: urlParams.get("user_name") || "",
+        username: urlParams.get("username") || "",
         anon: urlParams.get("anon") || "",
         url: urlParams.get("url") || "",
         app_name: urlParams.get("app_name") || "",
@@ -262,8 +262,8 @@
     if (queryForm.app_name && queryForm.app_name.trim() !== "") {
       params.set("app_name", queryForm.app_name);
     }
-    if (queryForm.user_name && queryForm.user_name.trim() !== "") {
-      params.set("user_name", queryForm.user_name);
+    if (queryForm.username && queryForm.username.trim() !== "") {
+      params.set("username", queryForm.username);
     }
     if (queryForm.url && queryForm.url.trim() !== "") {
       params.set("url", queryForm.url);
@@ -335,7 +335,7 @@
       direction: "desc",
       consumer_id: "",
       user_id: "",
-      user_name: "",
+      username: "",
       anon: "",
       url: "",
       app_name: "",

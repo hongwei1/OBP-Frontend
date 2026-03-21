@@ -30,6 +30,8 @@ export interface RoleCheckResult {
   hasAllRoles: boolean;
   missingRoles: RoleRequirement[];
   hasRoles: RoleRequirement[];
+  /** Roles the user doesn't explicitly have, but JIT will auto-grant on use */
+  jitRoles: RoleRequirement[];
 }
 
 /**
@@ -303,12 +305,54 @@ export function getPageRoles(routeId: string): PageRoleConfig | undefined {
 }
 
 /**
+ * Roles excluded from JIT auto-granting (to prevent privilege escalation).
+ */
+const JIT_EXCLUDED_ROLES = new Set([
+  "CanCreateEntitlementAtOneBank",
+  "CanCreateEntitlementAtAnyBank",
+]);
+
+/**
+ * Check whether JIT can cover a missing role for this user.
+ * JIT requires:
+ * - JIT feature enabled on the OBP instance
+ * - User holds CanCreateEntitlementAtAnyBank (system-wide), OR
+ *   CanCreateEntitlementAtOneBank for the relevant bank (bank-scoped roles)
+ * - The missing role is not one of the excluded meta-roles
+ */
+function canJitGrant(
+  requirement: RoleRequirement,
+  userEntitlements: UserEntitlement[],
+  currentBankId?: string,
+): boolean {
+  if (JIT_EXCLUDED_ROLES.has(requirement.role)) return false;
+
+  // CanCreateEntitlementAtAnyBank covers everything
+  const hasAnyBank = userEntitlements.some(
+    (e) => e.role_name === "CanCreateEntitlementAtAnyBank",
+  );
+  if (hasAnyBank) return true;
+
+  // For bank-scoped roles, CanCreateEntitlementAtOneBank at the relevant bank also works
+  if (requirement.bankScoped || requirement.bankId) {
+    const bankId = requirement.bankId || currentBankId;
+    if (!bankId) return false;
+    return userEntitlements.some(
+      (e) => e.role_name === "CanCreateEntitlementAtOneBank" && e.bank_id === bankId,
+    );
+  }
+
+  return false;
+}
+
+/**
  * Check if a user has the required roles.
  *
  * @param userEntitlements - List of entitlements the user has
  * @param requiredRoles - List of roles to check
  * @param currentBankId - The currently selected bank ID (for bankScoped role checks)
  * @param requirementType - "OR" (default): user needs at least one; "AND": user needs all
+ * @param jitEnabled - Whether Just In Time entitlements are enabled on this OBP instance
  * @returns RoleCheckResult with missing and present roles
  */
 export function checkRoles(
@@ -316,9 +360,11 @@ export function checkRoles(
   requiredRoles: RoleRequirement[],
   currentBankId?: string,
   requirementType: "OR" | "AND" = "OR",
+  jitEnabled: boolean = false,
 ): RoleCheckResult {
   const missingRoles: RoleRequirement[] = [];
   const hasRoles: RoleRequirement[] = [];
+  const jitRoles: RoleRequirement[] = [];
 
   for (const requirement of requiredRoles) {
     const hasRole = userEntitlements.some((entitlement) => {
@@ -340,22 +386,27 @@ export function checkRoles(
 
     if (hasRole) {
       hasRoles.push(requirement);
+    } else if (jitEnabled && canJitGrant(requirement, userEntitlements, currentBankId)) {
+      jitRoles.push(requirement);
     } else {
       missingRoles.push(requirement);
     }
   }
 
   logger.debug(
-    `Role check (${requirementType}): ${hasRoles.length}/${requiredRoles.length} roles present`,
+    `Role check (${requirementType}): ${hasRoles.length} present, ${jitRoles.length} JIT-covered, ${missingRoles.length} missing / ${requiredRoles.length} total`,
   );
+
+  // JIT-covered roles count as "effectively has" for access decisions
+  const effectiveHasCount = hasRoles.length + jitRoles.length;
 
   let hasAccess: boolean;
   if (requirementType === "AND") {
-    // AND: user needs ALL required roles
+    // AND: user needs ALL required roles (explicitly or via JIT)
     hasAccess = requiredRoles.length === 0 || missingRoles.length === 0;
   } else {
-    // OR: user needs at least one of the required roles
-    hasAccess = requiredRoles.length === 0 || hasRoles.length > 0;
+    // OR: user needs at least one of the required roles (explicitly or via JIT)
+    hasAccess = requiredRoles.length === 0 || effectiveHasCount > 0;
   }
 
   if (!hasAccess) {
@@ -366,6 +417,7 @@ export function checkRoles(
     hasAllRoles: hasAccess,
     missingRoles: hasAccess ? [] : missingRoles,
     hasRoles,
+    jitRoles,
   };
 }
 

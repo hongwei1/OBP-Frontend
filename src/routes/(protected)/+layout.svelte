@@ -17,6 +17,7 @@
     optional={pageRoles.optional}
     requirementType={pageRoles.requirementType}
     currentBankId={currentBank.bankId}
+    jitEnabled={data.jitEnabled}
   >
     {@render children()}
   </PageRoleCheck>

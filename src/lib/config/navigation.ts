@@ -36,6 +36,7 @@ import {
   Radio,
   FileSignature,
   Search,
+  ToggleLeft,
 } from "@lucide/svelte";
 import { env } from "$env/dynamic/public";
 
@@ -120,6 +121,11 @@ function buildSystemItems(): NavigationItem[] {
       href: "/system/database-pool",
       label: "Database Pool",
       iconComponent: Waves,
+    },
+    {
+      href: "/system/features",
+      label: "Features",
+      iconComponent: ToggleLeft,
     },
     {
       href: "/system/featured-collections",

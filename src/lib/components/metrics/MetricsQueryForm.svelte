@@ -11,7 +11,7 @@
       direction: string;
       consumer_id: string;
       user_id: string;
-      user_name: string;
+      username: string;
       anon: string;
       url: string;
       app_name: string;
@@ -268,11 +268,11 @@
         />
       </div>
       <div class="form-field">
-        <label for="user_name">User ID</label>
+        <label for="username">User ID</label>
         <input
           type="text"
-          id="user_name"
-          bind:value={queryForm.user_name}
+          id="username"
+          bind:value={queryForm.username}
           placeholder="Filter by user ID"
           onblur={handleFieldChange}
           class="form-input"

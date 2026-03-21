@@ -7,7 +7,6 @@ export interface JWTPayload {
   [key: string]: any;
   sub?: string;
   username?: string;
-  user_name?: string;
   login?: string;
   user_id?: string;
   preferred_username?: string;
@@ -36,7 +35,6 @@ export function extractUsernameFromJWT(jwt: string): string {
     if (decoded.name) userInfo.push(`name:${decoded.name}`);
     if (decoded.preferred_username) userInfo.push(`preferred_username:${decoded.preferred_username}`);
     if (decoded.username) userInfo.push(`username:${decoded.username}`);
-    if (decoded.user_name) userInfo.push(`user_name:${decoded.user_name}`);
     if (decoded.login) userInfo.push(`login:${decoded.login}`);
     
     // System identifiers

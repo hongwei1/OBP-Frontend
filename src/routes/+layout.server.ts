@@ -9,6 +9,7 @@ import type { OBPConsentInfo } from "$lib/obp/types";
 
 import { env } from "$env/dynamic/private";
 import { env as publicEnv } from "$env/dynamic/public";
+import { obp_requests } from "$lib/obp/requests";
 
 
 export interface RootLayoutData {
@@ -18,6 +19,7 @@ export interface RootLayoutData {
   opeyConsentInfo?: OBPConsentInfo;
   externalLinks: Record<string, string>;
   userEntitlements: Array<{ entitlement_id: string; role_name: string; bank_id: string }>;
+  jitEnabled: boolean;
 }
 
 export async function load(event: RequestEvent) {
@@ -99,9 +101,20 @@ export async function load(event: RequestEvent) {
   const userEntitlements =
     (session?.data?.user as any)?.entitlements?.list || [];
 
+  // Fetch OBP features to check if JIT entitlements are enabled
+  let jitEnabled = false;
+  try {
+    const features = await obp_requests.get("/obp/v6.0.0/features");
+    jitEnabled = features.allow_just_in_time_entitlements === true;
+    logger.info(`JIT entitlements: ${jitEnabled ? "enabled" : "disabled"}`);
+  } catch (error) {
+    logger.warn("Failed to fetch OBP features, JIT entitlements assumed disabled:", error);
+  }
+
   return {
     ...data,
     externalLinks: validExternalLinks,
     userEntitlements,
+    jitEnabled,
   } as RootLayoutData;
 }

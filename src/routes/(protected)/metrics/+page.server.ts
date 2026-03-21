@@ -8,7 +8,7 @@ import { error } from "@sveltejs/kit";
 interface MetricRecord {
   date: string;
   duration: number;
-  user_name: string;
+  username: string;
   app_name: string;
   developer_email: string;
   consumer_id: string;
@@ -89,10 +89,10 @@ export const load: PageServerLoad = async ({ locals, url, depends }) => {
       params.app_name = url.searchParams.get("app_name")!;
     }
     if (
-      url.searchParams.has("user_name") &&
-      url.searchParams.get("user_name")?.trim()
+      url.searchParams.has("username") &&
+      url.searchParams.get("username")?.trim()
     ) {
-      params.user_name = url.searchParams.get("user_name")!;
+      params.username = url.searchParams.get("username")!;
     }
     if (url.searchParams.has("url") && url.searchParams.get("url")?.trim()) {
       params.url = url.searchParams.get("url")!;
