@@ -6,3 +6,4 @@ dist
 build
 .svelte-kit
 .DS_Store
+.claude
