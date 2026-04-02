@@ -79,10 +79,12 @@
       toast.error("Validation Error", "Select a bank first");
       return;
     }
+    if (!confirm(`Grant ${bankRoles.length} bank roles to ${username}?`)) return;
     grantRoles(bankRoles, bankId);
   }
 
   function grantAllSystemRoles() {
+    if (!confirm(`Grant ${systemRoles.length} system roles to ${username}?`)) return;
     grantRoles(systemRoles, "");
   }
 </script>

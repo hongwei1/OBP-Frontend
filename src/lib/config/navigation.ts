@@ -41,6 +41,7 @@ import {
   AppWindow,
   Link,
   Zap,
+  ShieldOff,
 } from "@lucide/svelte";
 import { env } from "$env/dynamic/public";
 
@@ -292,6 +293,11 @@ function buildRbacItems(): NavigationItem[] {
       iconComponent: Zap,
     },
     {
+      href: "/rbac/entitlements/bulk-revoke",
+      label: "Bulk Revoke",
+      iconComponent: ShieldOff,
+    },
+    {
       href: "/rbac/groups",
       label: "Groups",
       iconComponent: Users,
@@ -315,11 +321,6 @@ function buildRbacItems(): NavigationItem[] {
       href: "/rbac/entitlement-requests",
       label: "Entitlement Requests",
       iconComponent: FileCheck,
-    },
-    {
-      href: "/rbac/banks",
-      label: "Banks",
-      iconComponent: Building2,
     },
   ];
 

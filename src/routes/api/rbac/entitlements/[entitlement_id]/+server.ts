@@ -62,16 +62,26 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 
     return json({ success: true }, { status: 200 });
   } catch (err) {
-    logger.error("Error deleting entitlement:", err);
-
     // Extract full error details - NEVER hide or simplify OBP error messages!
     const { message, obpErrorCode } = extractErrorDetails(err);
+
+    // Pass through the original OBP status code (e.g. 400, 403) instead of always 500
+    const statusCode = (err as any)?.statusCode || 500;
+
+    logger.error("========================================");
+    logger.error(`  FAILED TO DELETE ENTITLEMENT`);
+    logger.error(`  Entitlement ID: ${entitlement_id}`);
+    logger.error(`  HTTP Status: ${statusCode}`);
+    logger.error(`  OBP Error Code: ${obpErrorCode || "none"}`);
+    logger.error(`  Message: ${message}`);
+    logger.error(`  Raw error: ${err instanceof Error ? err.stack || err.message : String(err)}`);
+    logger.error("========================================");
 
     const errorResponse: any = { error: message };
     if (obpErrorCode) {
       errorResponse.obpErrorCode = obpErrorCode;
     }
 
-    return json(errorResponse, { status: 500 });
+    return json(errorResponse, { status: statusCode });
   }
 };
