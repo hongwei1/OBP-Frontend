@@ -6,8 +6,73 @@
   let isLoading = $state(false);
   let error = $state<string | null>(null);
   let lastUpdated = $state<string>("");
-  let refreshInterval: number | undefined = undefined;
+  let refreshInterval: ReturnType<typeof setInterval> | null = null;
   let copiedMessageIndex = $state<number | null>(null);
+
+  let eventSource: EventSource | null = null;
+  let streamConnected = $state(false);
+  let transportReason = $state<string>("");
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Performance: cap rendered rows and batch incoming events.
+  const ROW_LIMIT_OPTIONS = [5, 7, 10, 25, 50, 100, 250, 500, 1000];
+  let maxRows = $state(25);
+  let pendingLogs: any[] = [];
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  let nextLogId = 0;
+  let frozen = $state(false);
+  let tableWrapper: HTMLDivElement | null = $state(null);
+
+  // Trim existing logs when maxRows is reduced.
+  $effect(() => {
+    if (logs.length > maxRows) {
+      logs = logs.slice(logs.length - maxRows);
+    }
+  });
+
+  function isAtBottom(el: HTMLElement): boolean {
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 32;
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(() => {
+      if (tableWrapper) {
+        tableWrapper.scrollTop = tableWrapper.scrollHeight;
+      }
+    });
+  }
+
+  function flushPending() {
+    flushTimer = null;
+    if (frozen) return;
+    if (pendingLogs.length === 0) return;
+    const incoming = pendingLogs;
+    pendingLogs = [];
+    const wasAtBottom = tableWrapper ? isAtBottom(tableWrapper) : true;
+    // Append newest at the bottom (tail -f order), trim from the top.
+    const next = [...logs, ...incoming];
+    logs = next.length > maxRows ? next.slice(next.length - maxRows) : next;
+    lastUpdated = new Date().toLocaleString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    if (wasAtBottom) scrollToBottom();
+  }
+
+  function scheduleFlush() {
+    if (flushTimer) return;
+    flushTimer = setTimeout(flushPending, 200);
+  }
+
+  function toggleFrozen() {
+    frozen = !frozen;
+    if (!frozen) {
+      // Resume — flush any queued events immediately.
+      flushPending();
+    }
+  }
 
   const logLevels = [
     { value: "", label: "ALL" },
@@ -16,6 +81,12 @@
     { value: "INFO", label: "INFO" },
     { value: "DEBUG", label: "DEBUG" },
   ];
+
+  function getLogTimestamp(log: any): string {
+    if (log.timestamp) return log.timestamp;
+    const parsed = parseLogMessage(log.message || "");
+    return parsed.timestamp;
+  }
 
   async function fetchLogs() {
     try {
@@ -40,14 +111,25 @@
         throw new Error(data.message);
       }
 
-      // Handle both array response and object with entries property
-      logs = Array.isArray(data) ? data : data.entries || [];
+      if (frozen) return;
+
+      // Sort ascending by embedded timestamp so newest lands at the bottom.
+      const raw = Array.isArray(data) ? data : data.entries || [];
+      const sorted = [...raw].sort((a, b) =>
+        getLogTimestamp(a).localeCompare(getLogTimestamp(b)),
+      );
+      const trimmed =
+        sorted.length > maxRows ? sorted.slice(sorted.length - maxRows) : sorted;
+
+      const wasAtBottom = tableWrapper ? isAtBottom(tableWrapper) : true;
+      logs = trimmed.map((e) => ({ ...e, __id: nextLogId++ }));
       lastUpdated = new Date().toLocaleString(undefined, {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
       });
+      if (wasAtBottom) scrollToBottom();
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to fetch logs";
     } finally {
@@ -55,33 +137,98 @@
     }
   }
 
-  function startAutoRefresh() {
-    // Clear any existing interval
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-    }
-
-    // Initial fetch
-    fetchLogs();
-
-    // Set up 5-second interval
+  function startPolling() {
+    if (refreshInterval) return;
+    // Initial fetch only if we have nothing yet
+    if (logs.length === 0) fetchLogs();
     refreshInterval = setInterval(() => {
       fetchLogs();
     }, 5000);
   }
 
-  function stopAutoRefresh() {
+  function stopPolling() {
     if (refreshInterval) {
       clearInterval(refreshInterval);
-      refreshInterval = undefined;
+      refreshInterval = null;
     }
+  }
+
+  function mapLevelForStream(level: string): string {
+    const upper = (level || "").toUpperCase();
+    if (!upper) return "ALL";
+    if (upper === "WARNING") return "WARNING";
+    return upper;
+  }
+
+  function closeStream() {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    streamConnected = false;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    pendingLogs = [];
+  }
+
+  function connectStream() {
+    closeStream();
+    const url = `/backend/log-cache/stream?level=${encodeURIComponent(mapLevelForStream(logLevel))}`;
+    eventSource = new EventSource(url);
+
+    eventSource.onopen = () => {
+      streamConnected = true;
+      transportReason = "";
+      // gRPC connected — stop polling
+      stopPolling();
+      // Fetch current buffered entries once so the table isn't empty
+      if (logs.length === 0) fetchLogs();
+    };
+
+    eventSource.onmessage = (event) => {
+      try {
+        const entry = JSON.parse(event.data);
+        entry.__id = nextLogId++;
+        pendingLogs.push(entry);
+        scheduleFlush();
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    eventSource.addEventListener("transport-error", (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data);
+        transportReason = payload.reason || "gRPC transport error";
+      } catch {
+        transportReason = "gRPC transport error";
+      }
+    });
+
+    eventSource.onerror = () => {
+      streamConnected = false;
+      if (!transportReason) {
+        transportReason = "SSE connection to server failed";
+      }
+      closeStream();
+      startPolling();
+      // Retry gRPC after 10s
+      reconnectTimer = setTimeout(connectStream, 10000);
+    };
   }
 
   function handleLogLevelChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     logLevel = target.value;
-    // Restart auto-refresh with new log level
-    startAutoRefresh();
+    // Reset and re-subscribe with new level
+    logs = [];
+    connectStream();
   }
 
   function parseLogMessage(message: string): {
@@ -148,14 +295,15 @@
   $effect(() => {
     if (typeof window !== "undefined" && !initialized) {
       initialized = true;
-      startAutoRefresh();
+      connectStream();
     }
   });
 
   // Cleanup effect
   $effect(() => {
     return () => {
-      stopAutoRefresh();
+      stopPolling();
+      closeStream();
     };
   });
 
@@ -194,18 +342,55 @@
             </div>
           </div>
           <div class="header-controls">
-            <div class="filter-group">
-              <label for="logLevel" class="filter-label">Log Level:</label>
-              <select
-                id="logLevel"
-                value={logLevel}
-                onchange={handleLogLevelChange}
-                class="filter-select"
+            <div class="header-row">
+              <div class="filter-group">
+                <label for="logLevel" class="filter-label">Log Level:</label>
+                <select
+                  id="logLevel"
+                  value={logLevel}
+                  onchange={handleLogLevelChange}
+                  class="filter-select"
+                >
+                  {#each logLevels as level}
+                    <option value={level.value}>{level.label}</option>
+                  {/each}
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="rowLimit" class="filter-label">Rows:</label>
+                <select
+                  id="rowLimit"
+                  bind:value={maxRows}
+                  class="filter-select"
+                  data-testid="row-limit-select"
+                >
+                  {#each ROW_LIMIT_OPTIONS as opt}
+                    <option value={opt}>{opt}</option>
+                  {/each}
+                </select>
+              </div>
+              <button
+                class="freeze-btn"
+                onclick={toggleFrozen}
+                data-testid="freeze-btn"
+                data-state={frozen ? "frozen" : "running"}
               >
-                {#each logLevels as level}
-                  <option value={level.value}>{level.label}</option>
-                {/each}
-              </select>
+                {frozen ? `Continue${pendingLogs.length > 0 ? ` (+${pendingLogs.length})` : ""}` : "Freeze"}
+              </button>
+              <div
+                class="transport-indicator"
+                data-transport={streamConnected ? "grpc" : "rest"}
+                title={streamConnected
+                  ? "gRPC live stream"
+                  : transportReason
+                    ? `Polling (fallback): ${transportReason}`
+                    : "Polling fallback"}
+              >
+                <span
+                  class="transport-dot {streamConnected ? 'transport-dot-on' : 'transport-dot-off'}"
+                ></span>
+                {streamConnected ? "gRPC live" : "Polling"}
+              </div>
             </div>
             {#if lastUpdated}
               <div class="last-updated">
@@ -230,29 +415,36 @@
           </div>
         {:else if logs.length > 0}
           <div class="logs-container">
-            <div class="table-wrapper">
+            <div class="table-wrapper" bind:this={tableWrapper}>
               <table class="logs-table">
-                <thead>
-                  <tr>
-                    <th style="width: 40px;"></th>
-                    <th>Timestamp</th>
-                    <th>Level</th>
-                    <th>Message</th>
-                    <th>Source</th>
-                  </tr>
-                </thead>
                 <tbody>
-                  {#each logs as log}
+                  {#each logs as log, i (log.__id ?? i)}
                     {@const parsed = parseLogMessage(log.message || "")}
-                    <tr>
+                    {@const displayTimestamp = parsed.timestamp ? parsed.timestamp : log.timestamp}
+                    {@const displayMessage = parsed.cleanMessage ? parsed.cleanMessage : log.message}
+                    {@const displaySource = parsed.source ? parsed.source : "gRPC"}
+                    <tr class="log-main-row">
+                      <td class="timestamp-cell">
+                        {formatTimestamp(displayTimestamp)}
+                      </td>
+                      <td>
+                        <span
+                          class="log-level-badge {getLogLevelClass(
+                            log.level || log.log_level,
+                          )}"
+                        >
+                          {log.level || log.log_level || "N/A"}
+                        </span>
+                      </td>
+                      <td class="source-cell">{displaySource}</td>
                       <td class="copy-cell">
                         <button
                           class="copy-btn"
-                          onclick={() => copyMessage(log, logs.indexOf(log))}
+                          onclick={() => copyMessage(log, i)}
                           title="Copy row"
                           aria-label="Copy row"
                         >
-                          {#if copiedMessageIndex === logs.indexOf(log)}
+                          {#if copiedMessageIndex === i}
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="16"
@@ -293,22 +485,11 @@
                           {/if}
                         </button>
                       </td>
-                      <td class="timestamp-cell">
-                        {formatTimestamp(parsed.timestamp)}
+                    </tr>
+                    <tr class="log-message-row">
+                      <td class="message-cell" colspan="4">
+                        {displayMessage || "N/A"}
                       </td>
-                      <td>
-                        <span
-                          class="log-level-badge {getLogLevelClass(
-                            log.level || log.log_level,
-                          )}"
-                        >
-                          {log.level || log.log_level || "N/A"}
-                        </span>
-                      </td>
-                      <td class="message-cell">
-                        {parsed.cleanMessage || "N/A"}
-                      </td>
-                      <td class="source-cell">{parsed.source || "N/A"}</td>
                     </tr>
                   {/each}
                 </tbody>
@@ -437,6 +618,74 @@
     ring-color: rgba(59, 130, 246, 0.2);
   }
 
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .freeze-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  .freeze-btn:hover {
+    background: #f9fafb;
+  }
+
+  .freeze-btn[data-state="frozen"] {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+
+  :global([data-mode="dark"]) .freeze-btn {
+    background: rgb(var(--color-surface-700));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-200);
+  }
+
+  :global([data-mode="dark"]) .freeze-btn[data-state="frozen"] {
+    background: rgba(251, 191, 36, 0.2);
+    color: rgb(253, 224, 71);
+    border-color: rgba(251, 191, 36, 0.4);
+  }
+
+  .transport-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  :global([data-mode="dark"]) .transport-indicator {
+    color: var(--color-surface-400);
+  }
+
+  .transport-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+  }
+
+  .transport-dot-on {
+    background: #22c55e;
+  }
+
+  .transport-dot-off {
+    background: #f59e0b;
+  }
+
   .last-updated {
     font-size: 0.75rem;
     color: #6b7280;
@@ -468,8 +717,24 @@
 
   .table-wrapper {
     overflow-x: auto;
+    overflow-y: auto;
+    max-width: 100%;
+    max-height: 70vh;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
+  }
+
+  .logs-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f9fafb;
+    box-shadow: inset 0 -2px 0 #e5e7eb;
+  }
+
+  :global([data-mode="dark"]) .logs-table thead th {
+    background: rgb(var(--color-surface-700));
+    box-shadow: inset 0 -2px 0 rgb(var(--color-surface-600));
   }
 
   :global([data-mode="dark"]) .table-wrapper {
@@ -498,22 +763,36 @@
   }
 
   .logs-table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     color: #111827;
   }
 
   :global([data-mode="dark"]) .logs-table td {
-    border-bottom-color: rgb(var(--color-surface-700));
     color: var(--color-surface-100);
   }
 
-  .logs-table tbody tr:hover {
+  .log-main-row td {
+    padding-bottom: 0.25rem;
+  }
+
+  .log-message-row td {
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  :global([data-mode="dark"]) .log-message-row td {
+    border-bottom-color: rgb(var(--color-surface-700));
+  }
+
+  .logs-table tbody tr.log-main-row:hover,
+  .logs-table tbody tr.log-main-row:hover + tr.log-message-row {
     background: #f9fafb;
   }
 
-  :global([data-mode="dark"]) .logs-table tbody tr:hover {
+  :global([data-mode="dark"]) .logs-table tbody tr.log-main-row:hover,
+  :global([data-mode="dark"]) .logs-table tbody tr.log-main-row:hover + tr.log-message-row {
     background: rgb(var(--color-surface-700));
   }
 
@@ -521,15 +800,15 @@
     border-bottom: none;
   }
 
-  .timestamp-cell {
+  .logs-table td.timestamp-cell {
     font-family: monospace;
-    font-size: 0.8125rem;
     white-space: nowrap;
   }
 
   .message-cell {
     max-width: 600px;
-    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .copy-cell {
@@ -578,6 +857,8 @@
     font-family: monospace;
     font-size: 0.8125rem;
     color: #6b7280;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   :global([data-mode="dark"]) .source-cell {
