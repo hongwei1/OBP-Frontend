@@ -29,7 +29,7 @@
         const response = await fetch("/proxy/obp/v6.0.0/banks");
         const result = await response.json();
         if (result.banks) {
-          banks = result.banks.map((b: any) => b.id).sort();
+          banks = result.banks.map((b: any) => b.bank_id).sort();
         }
       } catch (err) {
         console.error("Error fetching banks:", err);
@@ -46,22 +46,21 @@
   let providers = $state<string[]>([]);
   let selectedProvider = $state("");
   let searchQuery = $state("");
+  let lastSearchedQuery = $state("");
   let searchResults = $state<any[]>([]);
   let searchError = $state<string | null>(null);
   let isSearching = $state(false);
   let searchType = $state<"email" | "userid" | "username" | "">("");
+  let lastSearchCall = $state<{ proxyUrl: string; obpPath: string; status?: number; responseBody?: string } | null>(null);
 
   // Fetch providers on mount
   $effect(() => {
     async function fetchProviders() {
       try {
-        const response = await fetch("/backend/users/providers");
+        const response = await fetch("/proxy/obp/v6.0.0/providers");
         const result = await response.json();
         if (result.providers) {
           providers = result.providers;
-          if (providers.length > 0) {
-            selectedProvider = providers[0];
-          }
         }
       } catch (err) {
         console.error("Error fetching providers:", err);
@@ -91,6 +90,7 @@
       searchResults = [];
       searchError = null;
       searchType = "";
+      lastSearchedQuery = "";
       return;
     }
 
@@ -98,50 +98,43 @@
     searchType = type;
     isSearching = true;
     searchError = null;
+    lastSearchedQuery = searchQuery.trim();
+
+    const params = new URLSearchParams();
+    if (type === "email") {
+      params.set("email", searchQuery);
+    } else if (type === "userid") {
+      params.set("user_id", searchQuery);
+    } else {
+      params.set("username", searchQuery);
+      if (selectedProvider) {
+        params.set("provider", selectedProvider);
+      }
+    }
+    const proxyUrl = `/proxy/obp/v6.0.0/users?${params.toString()}`;
+
+    const obpPath = proxyUrl.replace(/^\/proxy/, "");
+    lastSearchCall = { proxyUrl, obpPath };
 
     try {
-      let response;
+      const response = await fetch(proxyUrl);
+      const responseText = await response.text();
+      lastSearchCall = { proxyUrl, obpPath, status: response.status, responseBody: responseText };
 
-      if (type === "email") {
-        // Search by email (OBPv4.0.0)
-        response = await fetch(
-          `/proxy/obp/v4.0.0/users/email/${encodeURIComponent(searchQuery)}/terminator`,
-        );
-      } else if (type === "userid") {
-        // Search by user ID (OBPv6.0.0)
-        response = await fetch(
-          `/proxy/obp/v6.0.0/users/user-id/${encodeURIComponent(searchQuery)}`,
-        );
-      } else {
-        // Search by provider and username (OBPv6.0.0)
-        if (!selectedProvider) {
-          console.error("Provider is required for username search");
-          searchResults = [];
-          isSearching = false;
-          return;
-        }
-        response = await fetch(
-          `/proxy/obp/v6.0.0/users/provider/${encodeURIComponent(selectedProvider)}/username/${encodeURIComponent(searchQuery)}`,
-        );
-      }
-
-      const result = await response.json();
+      const result = responseText ? JSON.parse(responseText) : {};
 
       if (!response.ok) {
-        searchError = result.error || `Search failed (HTTP ${response.status})`;
+        if (typeof result.message !== "string") {
+          throw new Error(
+            `OBP error response missing 'message' field (HTTP ${response.status})`,
+          );
+        }
+        searchError = result.message;
         searchResults = [];
         return;
       }
 
-      if (result.users) {
-        // Multiple results (email search, username search)
-        searchResults = result.users;
-      } else if (result.user_id) {
-        // Single user object returned directly by OBP (user ID or provider/username search)
-        searchResults = [result];
-      } else {
-        searchResults = [];
-      }
+      searchResults = result.users;
     } catch (err) {
       console.error("Search error:", err);
       searchError = err instanceof Error ? err.message : "Search failed — the API may be unavailable";
@@ -209,13 +202,10 @@
             bind:value={selectedProvider}
             class="form-input w-full"
           >
-            {#if providers.length === 0}
-              <option value="">Loading providers...</option>
-            {:else}
-              {#each providers as provider}
-                <option value={provider}>{provider}</option>
-              {/each}
-            {/if}
+            <option value="">Any</option>
+            {#each providers as provider}
+              <option value={provider}>{provider}</option>
+            {/each}
           </select>
         </div>
         <div class="flex-1">
@@ -238,6 +228,59 @@
           {isSearching ? "Searching..." : "Search"}
         </button>
       </form>
+
+      {#snippet technicalDetails()}
+        {#if lastSearchCall}
+          <details class="search-call-details" data-testid="last-search-call">
+            <summary class="search-call-summary" data-testid="last-search-call-toggle">Query</summary>
+            <div class="search-call-info">
+              <div class="search-call-field">
+                <label for="last-search-proxy-url" class="search-call-label">Proxy URL</label>
+                <input
+                  id="last-search-proxy-url"
+                  type="text"
+                  readonly
+                  value={lastSearchCall.proxyUrl}
+                  data-testid="last-search-proxy-url"
+                  class="search-call-input"
+                  onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
+                />
+              </div>
+              <div class="search-call-field">
+                <label for="last-search-obp-path" class="search-call-label">OBP path</label>
+                <input
+                  id="last-search-obp-path"
+                  type="text"
+                  readonly
+                  value={lastSearchCall.obpPath}
+                  data-testid="last-search-obp-path"
+                  class="search-call-input"
+                  onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
+                />
+              </div>
+              {#if lastSearchCall.status !== undefined}
+                <div class="search-call-field">
+                  <span class="search-call-label">Status</span>
+                  <span class="search-call-status" data-testid="last-search-status">{lastSearchCall.status}</span>
+                </div>
+              {/if}
+              {#if lastSearchCall.responseBody}
+                <div class="search-call-field">
+                  <label for="last-search-response-body" class="search-call-label">Response</label>
+                  <textarea
+                    id="last-search-response-body"
+                    readonly
+                    data-testid="last-search-response-body"
+                    class="search-call-textarea"
+                    onclick={(e) => (e.currentTarget as HTMLTextAreaElement).select()}
+                    rows="6"
+                  >{lastSearchCall.responseBody}</textarea>
+                </div>
+              {/if}
+            </div>
+          </details>
+        {/if}
+      {/snippet}
 
       <form
         onsubmit={(e) => {
@@ -297,11 +340,14 @@
 
       {#if searchResults.length > 0}
         <div class="mt-6">
-          <h3 class="text-lg font-semibold mb-4">
-            {searchResults.length === 1
-              ? "Result"
-              : `Results (${searchResults.length})`}
-          </h3>
+          <div class="search-results-header mb-4">
+            <h3 class="text-lg font-semibold">
+              {searchResults.length === 1
+                ? "Result"
+                : `Results (${searchResults.length})`}
+            </h3>
+            {@render technicalDetails()}
+          </div>
           <div class="table-wrapper">
             <table class="users-table">
               <thead>
@@ -339,12 +385,19 @@
           </div>
         </div>
       {:else if searchError}
-        <div class="mt-6 alert alert-error">
-          <strong>Search error:</strong> {searchError}
+        <div class="mt-6">
+          <div class="search-results-header mb-3">
+            <strong class="text-error">Search error</strong>
+            {@render technicalDetails()}
+          </div>
+          <div class="alert alert-error">{searchError}</div>
         </div>
-      {:else if searchQuery.trim() && !isSearching}
-        <div class="mt-6 text-center text-gray-500">
-          No users found matching "{searchQuery}"
+      {:else if lastSearchedQuery && !isSearching}
+        <div class="mt-6">
+          <div class="search-results-header mb-3">
+            <span class="text-gray-500">No users found matching "{lastSearchedQuery}"</span>
+            {@render technicalDetails()}
+          </div>
         </div>
       {/if}
     </div>
@@ -608,5 +661,89 @@
     background: rgb(var(--color-error-900));
     color: rgb(var(--color-error-200));
     border-color: rgb(var(--color-error-800));
+  }
+
+  .search-results-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .search-call-details {
+    font-size: 0.8125rem;
+  }
+
+  .search-call-details[open] {
+    flex-basis: 100%;
+  }
+
+  .search-call-summary {
+    padding: 0.25rem 0;
+    cursor: pointer;
+    font-weight: 600;
+    color: #6b7280;
+    user-select: none;
+  }
+
+  :global([data-mode="dark"]) .search-call-summary {
+    color: var(--color-surface-400);
+  }
+
+  .search-call-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .search-call-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .search-call-label {
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  :global([data-mode="dark"]) .search-call-label {
+    color: var(--color-surface-400);
+  }
+
+  .search-call-input,
+  .search-call-textarea {
+    width: 100%;
+    padding: 0.375rem 0.5rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+    color: #111827;
+  }
+
+  :global([data-mode="dark"]) .search-call-input,
+  :global([data-mode="dark"]) .search-call-textarea {
+    background: rgb(var(--color-surface-800));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-100);
+  }
+
+  .search-call-textarea {
+    resize: vertical;
+    min-height: 4rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .search-call-status {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
   }
 </style>

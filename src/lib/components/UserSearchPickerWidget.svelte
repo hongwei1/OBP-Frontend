@@ -52,10 +52,10 @@
   async function fetchProviders() {
     isLoadingProviders = true;
     try {
-      const response = await trackedFetch("/backend/users/providers");
+      const response = await trackedFetch("/proxy/obp/v6.0.0/providers");
       if (response.ok) {
         const data = await response.json();
-        providers = data.providers || [];
+        providers = data.providers;
       }
     } catch (error) {
       console.error("Failed to fetch providers:", error);
@@ -105,17 +105,18 @@
 
     try {
       let url: string;
-      let usesProviderEndpoint = false;
       if (type === "email") {
         url = `/proxy/obp/v4.0.0/users/email/${encodeURIComponent(trimmed)}/terminator`;
       } else if (type === "userid") {
         url = `/proxy/obp/v6.0.0/users/user-id/${encodeURIComponent(trimmed)}`;
-      } else if (selectedProvider) {
-        // Use provider+username endpoint when a provider is selected
-        url = `/proxy/obp/v6.0.0/users/provider/${encodeURIComponent(selectedProvider)}/username/${encodeURIComponent(trimmed)}`;
-        usesProviderEndpoint = true;
       } else {
-        url = `/proxy/obp/v6.0.0/users?username=${encodeURIComponent(trimmed)}`;
+        // Username search via /obp/v6.0.0/users with query-param filters
+        const params = new URLSearchParams();
+        params.set("username", trimmed);
+        if (selectedProvider) {
+          params.set("provider", selectedProvider);
+        }
+        url = `/proxy/obp/v6.0.0/users?${params.toString()}`;
       }
 
       const response = await trackedFetch(url);
@@ -133,12 +134,12 @@
 
       const data = await response.json();
 
-      // Normalize response: provider and userid OBP endpoints return the user object directly, others return {users: [...]}
+      // Normalize response: userid OBP endpoint returns the user object directly; others return {users: [...]}
       let users: UserResult[];
-      if (type === "userid" || usesProviderEndpoint) {
+      if (type === "userid") {
         users = data.user_id ? [data] : [];
       } else {
-        users = data.users || [];
+        users = data.users;
       }
 
       // Filter out users without a username
