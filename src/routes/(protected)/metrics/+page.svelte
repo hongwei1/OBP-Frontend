@@ -332,7 +332,14 @@
 
   function toggleFrozen() {
     frozen = !frozen;
-    if (!frozen) flushPendingMetrics();
+    if (frozen) {
+      // Freeze also halts REST polling so the table stays put.
+      if (transport === "rest") stopAutoRefresh();
+    } else {
+      flushPendingMetrics();
+      // Resume REST polling if the user had a refresh interval set.
+      if (transport === "rest") startAutoRefresh();
+    }
   }
 
   function buildStreamUrl(): string {
