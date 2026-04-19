@@ -366,11 +366,26 @@
     eventSource.onmessage = (event) => {
       try {
         const entry = JSON.parse(event.data);
+        // Client-side filters: gRPC StreamMetricsRequest doesn't accept these
+        // server-side, so we apply them here to match REST semantics.
+        // duration input is type="number", so Svelte may bind it as a number —
+        // coerce to string before checking.
+        const durationRaw = String(queryForm.duration ?? "").trim();
+        if (durationRaw !== "") {
+          const minDuration = parseInt(durationRaw, 10);
+          // REST semantic: duration > threshold (strictly greater).
+          if (!isNaN(minDuration) && entry.duration <= minDuration) return;
+        }
+        const codeRaw = String(queryForm.http_status_code ?? "").trim();
+        if (codeRaw !== "") {
+          const wantCode = parseInt(codeRaw, 10);
+          if (!isNaN(wantCode) && entry.status_code !== wantCode) return;
+        }
         entry.__id = nextMetricId++;
         pendingMetrics.push(entry);
         scheduleFlush();
-      } catch {
-        // ignore parse errors
+      } catch (err) {
+        console.error("gRPC event processing error:", err);
       }
     };
 
@@ -510,21 +525,21 @@
     <div class="panel-header-compact">
       <div class="panel-header-row">
         <h2 class="panel-title">Metrics Query</h2>
-        <div class="panel-meta header-fields" oninput={() => queryStatus = "dirty"}>
-          <label class="hf"><span>From</span>
-            <input type="datetime-local" bind:value={queryForm.from_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="from_date" />
+        <div class="panel-meta header-fields" oninput={() => queryStatus = "dirty"} data-transport={transport}>
+          <label class="hf" title={transport === "grpc" ? "Not applicable on gRPC — stream emits events from connect time" : ""}><span>From</span>
+            <input type="datetime-local" bind:value={queryForm.from_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="from_date" disabled={transport === "grpc"} />
           </label>
-          <label class="hf"><span>To</span>
-            <input type="datetime-local" bind:value={queryForm.to_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="to_date" />
+          <label class="hf" title={transport === "grpc" ? "Not applicable on gRPC — stream emits events from connect time" : ""}><span>To</span>
+            <input type="datetime-local" bind:value={queryForm.to_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="to_date" disabled={transport === "grpc"} />
           </label>
-          <label class="hf hf-tiny"><span>Limit</span>
-            <input type="number" bind:value={queryForm.limit} min="1" max="10000" onblur={handleFieldChange} onchange={handleFieldChange} name="limit" />
+          <label class="hf hf-tiny" title={transport === "grpc" ? "Not applicable on gRPC — streams can't paginate" : ""}><span>Limit</span>
+            <input type="number" bind:value={queryForm.limit} min="1" max="10000" onblur={handleFieldChange} onchange={handleFieldChange} name="limit" disabled={transport === "grpc"} />
           </label>
-          <label class="hf hf-tiny"><span>Offset</span>
-            <input type="number" bind:value={queryForm.offset} min="0" onblur={handleFieldChange} onchange={handleFieldChange} name="offset" />
+          <label class="hf hf-tiny" title={transport === "grpc" ? "Not applicable on gRPC — streams can't paginate" : ""}><span>Offset</span>
+            <input type="number" bind:value={queryForm.offset} min="0" onblur={handleFieldChange} onchange={handleFieldChange} name="offset" disabled={transport === "grpc"} />
           </label>
-          <label class="hf hf-sm"><span>Sort</span>
-            <select bind:value={queryForm.sort_by} onchange={handleFieldChange} name="sort_by">
+          <label class="hf hf-sm" title={transport === "grpc" ? "Not applicable on gRPC — events arrive in real-time order" : ""}><span>Sort</span>
+            <select bind:value={queryForm.sort_by} onchange={handleFieldChange} name="sort_by" disabled={transport === "grpc"}>
               <option value="date">Date</option>
               <option value="url">URL</option>
               <option value="username">User</option>
@@ -536,8 +551,8 @@
               <option value="implemented_in_version">Version</option>
             </select>
           </label>
-          <label class="hf hf-xs"><span>Dir</span>
-            <select bind:value={queryForm.direction} onchange={handleFieldChange} name="direction">
+          <label class="hf hf-xs" title={transport === "grpc" ? "Not applicable on gRPC — events arrive in real-time order" : ""}><span>Dir</span>
+            <select bind:value={queryForm.direction} onchange={handleFieldChange} name="direction" disabled={transport === "grpc"}>
               <option value="desc">Desc</option>
               <option value="asc">Asc</option>
             </select>
@@ -572,6 +587,7 @@
           showAutoRefresh={false}
           showClearButton={false}
           showRefreshButton={false}
+          {transport}
         />
       </div>
     {/if}
@@ -666,6 +682,7 @@
                   <th>App</th>
                   <th>Operation ID</th>
                   <th>Method</th>
+                  <th>Status</th>
                   <th>Duration</th>
                   <th>Correlation ID</th>
                 </tr>
@@ -704,6 +721,21 @@
                         {metric.verb}
                       </span>
                     </td>
+                    <td class="status-cell">
+                      {#if metric.status_code}
+                        <span
+                          class="status-badge"
+                          class:status-2xx={metric.status_code >= 200 && metric.status_code < 300}
+                          class:status-3xx={metric.status_code >= 300 && metric.status_code < 400}
+                          class:status-4xx={metric.status_code >= 400 && metric.status_code < 500}
+                          class:status-5xx={metric.status_code >= 500}
+                        >
+                          {metric.status_code}
+                        </span>
+                      {:else}
+                        <span class="status-muted">—</span>
+                      {/if}
+                    </td>
                     <td class="duration-cell">
                       <span
                         class="duration-badge"
@@ -722,7 +754,7 @@
                     </td>
                   </tr>
                   <tr class="metric-row-endpoint">
-                    <td colspan="7" class="endpoint-cell-full">
+                    <td colspan="8" class="endpoint-cell-full">
                       <code class="api-instance-id" title="API Instance ID"
                         >{metric.api_instance_id || "N/A"}</code
                       >
@@ -864,6 +896,8 @@
   }
 
   .full-width-panel {
+    /* override .panel's overflow:hidden so the header can position:sticky */
+    overflow: visible;
     margin-bottom: 1.5rem;
     width: 100%;
   }
@@ -893,6 +927,14 @@
   :global([data-mode="dark"]) .panel-header-compact {
     background: var(--color-surface-800);
     border-color: var(--color-surface-700);
+  }
+
+  /* Results panel header stays pinned so Freeze / transport toggle are always reachable. */
+  .full-width-panel > .panel-header-compact {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
   .panel-header-row {
@@ -1454,6 +1496,63 @@
 
   .method-patch {
     background-color: var(--color-secondary-500);
+  }
+
+  .status-cell {
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .status-badge.status-2xx {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .status-badge.status-3xx {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .status-badge.status-4xx {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-badge.status-5xx {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-2xx {
+    background: rgba(16, 185, 129, 0.2);
+    color: rgb(110, 231, 183);
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-3xx {
+    background: rgba(59, 130, 246, 0.2);
+    color: rgb(147, 197, 253);
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-4xx {
+    background: rgba(251, 191, 36, 0.2);
+    color: rgb(253, 224, 71);
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-5xx {
+    background: rgba(239, 68, 68, 0.2);
+    color: rgb(252, 165, 165);
+  }
+
+  .status-muted {
+    color: #9ca3af;
   }
 
   .duration-cell {

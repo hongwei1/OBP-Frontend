@@ -33,6 +33,7 @@
     showRefreshButton?: boolean;
     filtersExpanded?: boolean;
     headerActions?: Snippet;
+    transport?: "rest" | "grpc";
   }
 
   let {
@@ -47,7 +48,11 @@
     showRefreshButton = true,
     filtersExpanded = $bindable(false),
     headerActions,
+    transport = "rest",
   }: Props = $props();
+
+  const isGrpc = $derived(transport === "grpc");
+  const grpcUnsupported = "Not applicable on gRPC stream";
 
   function handleFieldChange() {
     onFieldChange();
@@ -93,23 +98,23 @@
       <label class="qf-inline"><span>App</span>
         <input type="text" bind:value={queryForm.app_name} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="name" name="app_name" />
       </label>
-      <label class="qf-inline"><span>Apps</span>
-        <input type="text" bind:value={queryForm.include_app_names} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="csv" name="include_app_names" />
+      <label class="qf-inline" title={isGrpc ? grpcUnsupported : ""}><span>Apps</span>
+        <input type="text" bind:value={queryForm.include_app_names} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="csv" name="include_app_names" disabled={isGrpc} />
       </label>
-      <label class="qf-inline"><span>User</span>
-        <input type="text" bind:value={queryForm.username} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="username" />
+      <label class="qf-inline" title={isGrpc ? grpcUnsupported : ""}><span>User</span>
+        <input type="text" bind:value={queryForm.username} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="username" disabled={isGrpc} />
       </label>
       <label class="qf-inline"><span>Fn</span>
         <input type="text" bind:value={queryForm.implemented_by_partial_function} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="partial fn" name="implemented_by_partial_function" />
       </label>
-      <label class="qf-inline qf-sm"><span>Ver</span>
-        <input type="text" bind:value={queryForm.implemented_in_version} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ver" name="implemented_in_version" />
+      <label class="qf-inline qf-sm" title={isGrpc ? grpcUnsupported : ""}><span>Ver</span>
+        <input type="text" bind:value={queryForm.implemented_in_version} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ver" name="implemented_in_version" disabled={isGrpc} />
       </label>
       <label class="qf-inline qf-sm"><span>Min Duration</span>
         <input type="number" bind:value={queryForm.duration} min="0" onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ms" name="duration" />
       </label>
-      <label class="qf-inline qf-sm"><span>Anon</span>
-        <select bind:value={queryForm.anon} onchange={handleFieldChange} name="anon">
+      <label class="qf-inline qf-sm" title={isGrpc ? grpcUnsupported : ""}><span>Anon</span>
+        <select bind:value={queryForm.anon} onchange={handleFieldChange} name="anon" disabled={isGrpc}>
           <option value="">All</option>
           <option value="true">Yes</option>
           <option value="false">No</option>

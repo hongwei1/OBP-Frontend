@@ -59,6 +59,9 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
       grpcStream.on("data", (event: any) => {
         try {
+          logger.info(
+            `>>>>> gRPC >>>>> metric raw event keys=${Object.keys(event).join(",")} operation_id=${event.operation_id} duration=${event.duration} status_code=${event.status_code}`,
+          );
           const entry = formatMetricEvent(event);
           const data = `data: ${JSON.stringify(entry)}\n\n`;
           controller.enqueue(encoder.encode(data));
