@@ -299,7 +299,7 @@
 </script>
 
 <div
-  class="grid min-h-screen w-full grid-cols-[auto_1fr] divide-x divide-solid divide-surface-100-900"
+  class="grid min-h-screen w-full grid-cols-[auto_minmax(0,1fr)] divide-x divide-solid divide-surface-100-900"
 >
   <div class="sticky top-0 h-screen">
     <Navigation

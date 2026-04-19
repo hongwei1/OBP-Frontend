@@ -65,69 +65,113 @@
 </script>
 
 <form onsubmit={handleSubmit} class="qf">
-  {#if filtersExpanded}
+  {#if !isGrpc}
+    <!-- Row 1: time range, pagination, sort (REST only) -->
     <div class="qf-bar qf-filters">
-      <label class="qf-inline qf-sm"><span>Verb</span>
-        <select bind:value={queryForm.verb} onchange={handleFieldChange} name="verb">
-          <option value="">All</option>
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="DELETE">DEL</option>
-          <option value="PATCH">PATCH</option>
+      <label class="qf-inline"><span>From</span>
+        <input type="datetime-local" bind:value={queryForm.from_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="from_date" />
+      </label>
+      <label class="qf-inline"><span>To</span>
+        <input type="datetime-local" bind:value={queryForm.to_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="to_date" />
+      </label>
+      <label class="qf-inline qf-xs"><span>Limit</span>
+        <input type="number" bind:value={queryForm.limit} min="1" max="10000" onblur={handleFieldChange} onchange={handleFieldChange} name="limit" />
+      </label>
+      <label class="qf-inline qf-xs"><span>Offset</span>
+        <input type="number" bind:value={queryForm.offset} min="0" onblur={handleFieldChange} onchange={handleFieldChange} name="offset" />
+      </label>
+      <label class="qf-inline qf-sm"><span>Sort</span>
+        <select bind:value={queryForm.sort_by} onchange={handleFieldChange} name="sort_by">
+          <option value="date">Date</option>
+          <option value="url">URL</option>
+          <option value="username">User</option>
+          <option value="app_name">App</option>
+          <option value="verb">Method</option>
+          <option value="developer_email">Dev Email</option>
+          <option value="consumer_id">Consumer</option>
+          <option value="implemented_by_partial_function">Fn</option>
+          <option value="implemented_in_version">Ver</option>
         </select>
       </label>
-      <label class="qf-inline qf-sm"><span>Code</span>
-        <select bind:value={queryForm.http_status_code} onchange={handleFieldChange} name="http_status_code">
-          <option value="">All</option>
-          <option value="200">200</option>
-          <option value="201">201</option>
-          <option value="204">204</option>
-          <option value="400">400</option>
-          <option value="401">401</option>
-          <option value="403">403</option>
-          <option value="404">404</option>
-          <option value="500">500</option>
-          <option value="502">502</option>
-          <option value="503">503</option>
+      <label class="qf-inline qf-xs"><span>Dir</span>
+        <select bind:value={queryForm.direction} onchange={handleFieldChange} name="direction">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
         </select>
       </label>
-      <label class="qf-inline"><span>Consumer</span>
-        <input type="text" bind:value={queryForm.consumer_id} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="consumer_id" />
+    </div>
+  {/if}
+
+  <!-- Row 2: match filters (server-side) -->
+  <div class="qf-bar qf-filters">
+    <label class="qf-inline qf-sm"><span>Verb</span>
+      <select bind:value={queryForm.verb} onchange={handleFieldChange} name="verb">
+        <option value="">All</option>
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="DELETE">DEL</option>
+        <option value="PATCH">PATCH</option>
+      </select>
+    </label>
+    <label class="qf-inline qf-sm"><span>Code</span>
+      <select bind:value={queryForm.http_status_code} onchange={handleFieldChange} name="http_status_code">
+        <option value="">All</option>
+        <option value="200">200</option>
+        <option value="201">201</option>
+        <option value="204">204</option>
+        <option value="400">400</option>
+        <option value="401">401</option>
+        <option value="403">403</option>
+        <option value="404">404</option>
+        <option value="500">500</option>
+        <option value="502">502</option>
+        <option value="503">503</option>
+      </select>
+    </label>
+    <label class="qf-inline"><span>Consumer</span>
+      <input type="text" bind:value={queryForm.consumer_id} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="consumer_id" />
+    </label>
+    <label class="qf-inline"><span>App</span>
+      <input type="text" bind:value={queryForm.app_name} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="name" name="app_name" />
+    </label>
+    <label class="qf-inline"><span>Fn</span>
+      <input type="text" bind:value={queryForm.implemented_by_partial_function} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="partial fn" name="implemented_by_partial_function" />
+    </label>
+  </div>
+
+  <!-- Row 3: extra filters -->
+  <div class="qf-bar qf-filters">
+    {#if !isGrpc}
+      <label class="qf-inline"><span>Apps</span>
+        <input type="text" bind:value={queryForm.include_app_names} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="csv" name="include_app_names" />
       </label>
-      <label class="qf-inline"><span>App</span>
-        <input type="text" bind:value={queryForm.app_name} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="name" name="app_name" />
+      <label class="qf-inline"><span>User</span>
+        <input type="text" bind:value={queryForm.username} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="username" />
       </label>
-      <label class="qf-inline" title={isGrpc ? grpcUnsupported : ""}><span>Apps</span>
-        <input type="text" bind:value={queryForm.include_app_names} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="csv" name="include_app_names" disabled={isGrpc} />
+      <label class="qf-inline qf-sm"><span>Ver</span>
+        <input type="text" bind:value={queryForm.implemented_in_version} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ver" name="implemented_in_version" />
       </label>
-      <label class="qf-inline" title={isGrpc ? grpcUnsupported : ""}><span>User</span>
-        <input type="text" bind:value={queryForm.username} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="username" disabled={isGrpc} />
-      </label>
-      <label class="qf-inline"><span>Fn</span>
-        <input type="text" bind:value={queryForm.implemented_by_partial_function} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="partial fn" name="implemented_by_partial_function" />
-      </label>
-      <label class="qf-inline qf-sm" title={isGrpc ? grpcUnsupported : ""}><span>Ver</span>
-        <input type="text" bind:value={queryForm.implemented_in_version} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ver" name="implemented_in_version" disabled={isGrpc} />
-      </label>
-      <label class="qf-inline qf-sm"><span>Min Duration</span>
-        <input type="number" bind:value={queryForm.duration} min="0" onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ms" name="duration" />
-      </label>
-      <label class="qf-inline qf-sm" title={isGrpc ? grpcUnsupported : ""}><span>Anon</span>
-        <select bind:value={queryForm.anon} onchange={handleFieldChange} name="anon" disabled={isGrpc}>
+    {/if}
+    <label class="qf-inline qf-sm"><span>Min Duration</span>
+      <input type="number" bind:value={queryForm.duration} min="0" onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ms" name="duration" />
+    </label>
+    {#if !isGrpc}
+      <label class="qf-inline qf-sm"><span>Anon</span>
+        <select bind:value={queryForm.anon} onchange={handleFieldChange} name="anon">
           <option value="">All</option>
           <option value="true">Yes</option>
           <option value="false">No</option>
         </select>
       </label>
-      <button type="submit" hidden>Submit</button>
-      {#if showClearButton}
-        <div class="qf-actions">
-          <button type="button" class="qf-btn" onclick={onClear} title="Clear form">🗑️ Clear</button>
-        </div>
-      {/if}
-    </div>
-  {/if}
+    {/if}
+    <button type="submit" hidden>Submit</button>
+    {#if showClearButton}
+      <div class="qf-actions">
+        <button type="button" class="qf-btn" onclick={onClear} title="Clear form">🗑️ Clear</button>
+      </div>
+    {/if}
+  </div>
 </form>
 
 <style>

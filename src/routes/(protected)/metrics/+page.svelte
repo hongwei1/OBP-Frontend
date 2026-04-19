@@ -67,6 +67,14 @@
   let timeUpdateInterval: number | undefined = undefined;
   let currentTime = $state(new Date().toLocaleString());
   let lastRefreshTime = $state(new Date().toLocaleString());
+  const REFRESH_OPTIONS = [
+    { value: 5, label: "5s" },
+    { value: 10, label: "10s" },
+    { value: 30, label: "30s" },
+    { value: 60, label: "60s" },
+    { value: 0, label: "Off" },
+  ];
+  let refreshSeconds = $state(5);
   let countdown = $state(5);
   let isCountingDown = $state(false);
   let timestampColorIndex = $state(0);
@@ -269,25 +277,32 @@
   }
 
   function startAutoRefresh() {
-    // Start 5-second auto-refresh cycle
-    countdown = 5;
-    isCountingDown = true;
-
     if (refreshInterval) clearInterval(refreshInterval);
     if (countdownInterval) clearInterval(countdownInterval);
 
-    console.log("Starting auto-refresh countdown from 5");
+    // "Off" — keep the page, just don't auto-refresh.
+    if (refreshSeconds <= 0) {
+      isCountingDown = false;
+      countdown = 0;
+      return;
+    }
+
+    countdown = refreshSeconds;
+    isCountingDown = true;
+
     countdownInterval = setInterval(() => {
       countdown--;
-      console.log("Countdown:", countdown);
       if (countdown <= 0) {
-        console.log("Countdown reached 0, refreshing...");
         lastRefreshTime = new Date().toLocaleString();
         timestampColorIndex = (timestampColorIndex + 1) % 2;
         invalidate("app:metrics");
-        countdown = 5;
+        countdown = refreshSeconds;
       }
     }, 1000);
+  }
+
+  function handleRefreshIntervalChange() {
+    if (transport === "rest") startAutoRefresh();
   }
 
   function stopAutoRefresh() {
@@ -525,46 +540,7 @@
     <div class="panel-header-compact">
       <div class="panel-header-row">
         <h2 class="panel-title">Metrics Query</h2>
-        <div class="panel-meta header-fields" oninput={() => queryStatus = "dirty"} data-transport={transport}>
-          <label class="hf" title={transport === "grpc" ? "Not applicable on gRPC — stream emits events from connect time" : ""}><span>From</span>
-            <input type="datetime-local" bind:value={queryForm.from_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="from_date" disabled={transport === "grpc"} />
-          </label>
-          <label class="hf" title={transport === "grpc" ? "Not applicable on gRPC — stream emits events from connect time" : ""}><span>To</span>
-            <input type="datetime-local" bind:value={queryForm.to_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="to_date" disabled={transport === "grpc"} />
-          </label>
-          <label class="hf hf-tiny" title={transport === "grpc" ? "Not applicable on gRPC — streams can't paginate" : ""}><span>Limit</span>
-            <input type="number" bind:value={queryForm.limit} min="1" max="10000" onblur={handleFieldChange} onchange={handleFieldChange} name="limit" disabled={transport === "grpc"} />
-          </label>
-          <label class="hf hf-tiny" title={transport === "grpc" ? "Not applicable on gRPC — streams can't paginate" : ""}><span>Offset</span>
-            <input type="number" bind:value={queryForm.offset} min="0" onblur={handleFieldChange} onchange={handleFieldChange} name="offset" disabled={transport === "grpc"} />
-          </label>
-          <label class="hf hf-sm" title={transport === "grpc" ? "Not applicable on gRPC — events arrive in real-time order" : ""}><span>Sort</span>
-            <select bind:value={queryForm.sort_by} onchange={handleFieldChange} name="sort_by" disabled={transport === "grpc"}>
-              <option value="date">Date</option>
-              <option value="url">URL</option>
-              <option value="username">User</option>
-              <option value="app_name">App</option>
-              <option value="verb">Method</option>
-              <option value="developer_email">Developer Email</option>
-              <option value="consumer_id">Consumer ID</option>
-              <option value="implemented_by_partial_function">Partial Function</option>
-              <option value="implemented_in_version">Version</option>
-            </select>
-          </label>
-          <label class="hf hf-xs" title={transport === "grpc" ? "Not applicable on gRPC — events arrive in real-time order" : ""}><span>Dir</span>
-            <select bind:value={queryForm.direction} onchange={handleFieldChange} name="direction" disabled={transport === "grpc"}>
-              <option value="desc">Desc</option>
-              <option value="asc">Asc</option>
-            </select>
-          </label>
-          <button
-            class="header-btn"
-            onclick={() => filtersExpanded = !filtersExpanded}
-            data-testid="filters-toggle"
-            data-state={filtersExpanded ? "expanded" : "collapsed"}
-          >
-            {filtersExpanded ? "▾" : "▸"} More
-          </button>
+        <div class="panel-meta">
           <button
             class="header-btn query-btn"
             onclick={submitQuery}
@@ -576,21 +552,19 @@
       </div>
     </div>
 
-    {#if filtersExpanded}
-      <div class="panel-content" oninput={() => queryStatus = "dirty"}>
-        <MetricsQueryForm
-          bind:queryForm
-          bind:filtersExpanded
-          onFieldChange={handleFieldChange}
-          onClear={clearQuery}
-          onSubmit={submitQuery}
-          showAutoRefresh={false}
-          showClearButton={false}
-          showRefreshButton={false}
-          {transport}
-        />
-      </div>
-    {/if}
+    <div class="panel-content" oninput={() => queryStatus = "dirty"}>
+      <MetricsQueryForm
+        bind:queryForm
+        bind:filtersExpanded
+        onFieldChange={handleFieldChange}
+        onClear={clearQuery}
+        onSubmit={submitQuery}
+        showAutoRefresh={false}
+        showClearButton={false}
+        showRefreshButton={false}
+        {transport}
+      />
+    </div>
   </div>
 
   <!-- Panel 2: Results -->
@@ -648,10 +622,24 @@
             <span class="meta-separator">•</span>
             <span class="timestamp-color-{timestampColorIndex}">{lastRefreshTime}</span>
             <span class="meta-separator">•</span>
-            {#if isCountingDown}
-              <span class="countdown">{countdown}s</span>
-            {:else}
-              <span class="countdown-idle">{countdown}s</span>
+            <label class="refresh-interval">
+              <span>Every</span>
+              <select
+                bind:value={refreshSeconds}
+                onchange={handleRefreshIntervalChange}
+                data-testid="refresh-interval"
+              >
+                {#each REFRESH_OPTIONS as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </select>
+            </label>
+            {#if refreshSeconds > 0}
+              {#if isCountingDown}
+                <span class="countdown">{countdown}s</span>
+              {:else}
+                <span class="countdown-idle">{countdown}s</span>
+              {/if}
             {/if}
             <button
               class="refresh-btn-inline"
@@ -862,6 +850,9 @@
 
   .container {
     max-width: 1400px;
+    /* Allow shrinking below intrinsic min-width so the metrics table's
+       min-width: 800px doesn't expand the outer grid track. */
+    min-width: 0;
   }
 
   .alert {
@@ -896,10 +887,14 @@
   }
 
   .full-width-panel {
-    /* override .panel's overflow:hidden so the header can position:sticky */
-    overflow: visible;
+    /* overflow-x: clip prevents the metrics table from pushing a page-level
+       horizontal scrollbar. overflow-y: visible lets position:sticky on the
+       header work relative to the viewport. */
+    overflow-x: clip;
+    overflow-y: visible;
     margin-bottom: 1.5rem;
     width: 100%;
+    min-width: 0;
   }
 
   .panel-header {
@@ -949,6 +944,8 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
     font-size: 0.875rem;
     color: var(--color-surface-600);
   }
@@ -1146,6 +1143,30 @@
 
   :global([data-mode="dark"]) .url-display code {
     color: var(--color-surface-300);
+  }
+
+  .refresh-interval {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .refresh-interval select {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  :global([data-mode="dark"]) .refresh-interval select {
+    background: rgb(var(--color-surface-700));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-200);
   }
 
   .refresh-btn-inline {
