@@ -10,7 +10,7 @@ import { env } from '$env/dynamic/private';
 import { obp_requests } from '$lib/obp/requests';
 import { oauth2ProviderManager } from '$lib/oauth/providerManager';
 import { SessionOAuthHelper } from '$lib/oauth/sessionHelper';
-import { healthCheckRegistry } from '@obp/shared/health-check';
+import { healthCheckRegistry, OIDCHealthCheckService } from '@obp/shared/health-check';
 import { PUBLIC_OBP_BASE_URL } from '$env/static/public';
 
 import { redisService } from '$lib/redis/services/RedisService';
@@ -71,9 +71,34 @@ function initHealthChecks() {
 	const redisHealthCheck = new RedisHealthCheckService();
 	healthCheckRegistry.register(redisHealthCheck);
 
-	const oauthHealthChecks = oauth2ProviderManager.getHealthCheckEntries();
-	for (const check of oauthHealthChecks) {
-		healthCheckRegistry.register(check);
+	const testTokenDisabled = env.OIDC_HEALTHCHECK_TEST_TOKEN === 'false';
+	const testTokenStrict = env.OIDC_HEALTHCHECK_TEST_TOKEN_STRICT === 'true';
+
+	const credentialsFor = (provider: string): { clientId?: string; clientSecret?: string } => {
+		if (testTokenDisabled) return {};
+		switch (provider) {
+			case 'obp-oidc':
+				return { clientId: env.OBP_OAUTH_CLIENT_ID, clientSecret: env.OBP_OAUTH_CLIENT_SECRET };
+			case 'keycloak':
+				return { clientId: env.KEYCLOAK_OAUTH_CLIENT_ID, clientSecret: env.KEYCLOAK_OAUTH_CLIENT_SECRET };
+			default:
+				return {};
+		}
+	};
+
+	const availableProviders = oauth2ProviderManager.getAvailableProviders();
+	for (const p of availableProviders) {
+		if (!p.url) continue;
+		const { clientId, clientSecret } = credentialsFor(p.provider);
+		healthCheckRegistry.register(
+			new OIDCHealthCheckService({
+				serviceName: `OAuth2: ${p.provider}`,
+				wellKnownUrl: p.url,
+				clientId,
+				clientSecret,
+				strictClientCredentials: testTokenStrict
+			})
+		);
 	}
 
 	healthCheckRegistry.startAll();

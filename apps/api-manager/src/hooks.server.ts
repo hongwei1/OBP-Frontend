@@ -11,7 +11,7 @@ import { PUBLIC_OBP_BASE_URL } from "$env/static/public";
 import { oauth2ProviderManager } from "$lib/oauth/providerManager";
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import { resourceDocsCache } from "$lib/stores/resourceDocsCache";
-import { healthCheckRegistry } from '@obp/shared/health-check';
+import { healthCheckRegistry, OIDCHealthCheckService } from '@obp/shared/health-check';
 import { createOpeyNotebookDynamicEntityIfNeeded } from "$lib/server/opey/opeyNotebook";
 
 declare const process: { env: Record<string, string | undefined>; argv: string[] };
@@ -91,6 +91,36 @@ healthCheckRegistry.register({ serviceName: 'OBP API', url: `${PUBLIC_OBP_BASE_U
 if (env.OPEY_BASE_URL) {
   healthCheckRegistry.register({ serviceName: 'Opey II', url: `${env.OPEY_BASE_URL}/status` });
 }
+
+const testTokenDisabled = env.OIDC_HEALTHCHECK_TEST_TOKEN === 'false';
+const testTokenStrict = env.OIDC_HEALTHCHECK_TEST_TOKEN_STRICT === 'true';
+
+const credentialsForProvider = (provider: string): { clientId?: string; clientSecret?: string } => {
+  if (testTokenDisabled) return {};
+  switch (provider) {
+    case 'obp-oidc':
+      return { clientId: env.OBP_OAUTH_CLIENT_ID, clientSecret: env.OBP_OAUTH_CLIENT_SECRET };
+    case 'keycloak':
+      return { clientId: env.KEYCLOAK_OAUTH_CLIENT_ID, clientSecret: env.KEYCLOAK_OAUTH_CLIENT_SECRET };
+    default:
+      return {};
+  }
+};
+
+for (const p of oauth2ProviderManager.getAvailableProviders()) {
+  if (!p.url) continue;
+  const { clientId, clientSecret } = credentialsForProvider(p.provider);
+  healthCheckRegistry.register(
+    new OIDCHealthCheckService({
+      serviceName: `OAuth2: ${p.provider}`,
+      wellKnownUrl: p.url,
+      clientId,
+      clientSecret,
+      strictClientCredentials: testTokenStrict,
+    })
+  );
+}
+
 healthCheckRegistry.startAll();
 
 // Bootstrap: ensure opey_notebook dynamic entity exists (using application access)

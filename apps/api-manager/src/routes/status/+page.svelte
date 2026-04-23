@@ -1,14 +1,59 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
-	
+	import { Copy, Check } from '@lucide/svelte';
+
 	let { data }: { data: PageData } = $props();
-	
+
 	let autoRefresh = $state(true);
 	let refreshInterval = $state(30); // seconds
 	let countdown = $state(refreshInterval);
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 	let countdownId: ReturnType<typeof setInterval> | null = null;
+	let copiedService = $state<string | null>(null);
+
+	function buildServiceText(name: string, service: typeof data.services[string]): string {
+		const lines = [
+			`Service: ${service.service}`,
+			`Status: ${service.status}`,
+			`Last Checked: ${service.lastChecked}`
+		];
+		if (service.responseTimeMs !== undefined) {
+			lines.push(`Response Time: ${service.responseTimeMs}ms`);
+		}
+		if (service.conecutiveFailures > 0) {
+			lines.push(`Consecutive Failures: ${service.conecutiveFailures}`);
+		}
+		if (service.details) {
+			for (const [key, value] of Object.entries(service.details)) {
+				lines.push(`${key}: ${value}`);
+			}
+		}
+		if (service.error) {
+			lines.push(`Error: ${service.error}`);
+		}
+		return lines.join('\n');
+	}
+
+	async function copyServiceDetails(name: string, service: typeof data.services[string]) {
+		const text = buildServiceText(name, service);
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			const textarea = document.createElement('textarea');
+			textarea.value = text;
+			textarea.style.position = 'fixed';
+			textarea.style.opacity = '0';
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand('copy');
+			document.body.removeChild(textarea);
+		}
+		copiedService = name;
+		setTimeout(() => {
+			if (copiedService === name) copiedService = null;
+		}, 2000);
+	}
 	
 	function getStatusColor(status: string): string {
 		switch (status) {
@@ -197,7 +242,23 @@
 							{getStatusIcon(service.status)}
 						</div>
 						<div class="flex-1">
-							<h3 class="text-xl font-semibold mb-1">{service.service}</h3>
+							<div class="flex items-start justify-between gap-2">
+								<h3 class="text-xl font-semibold mb-1">{service.service}</h3>
+								<button
+									type="button"
+									onclick={() => copyServiceDetails(serviceName, service)}
+									class="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+									aria-label="Copy {service.service} details"
+									title="Copy details"
+									data-testid="copy-service-{serviceName}"
+								>
+									{#if copiedService === serviceName}
+										<Check class="h-4 w-4 text-green-600 dark:text-green-400" />
+									{:else}
+										<Copy class="h-4 w-4" />
+									{/if}
+								</button>
+							</div>
 							<div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
 								<span class="flex items-center gap-1">
 									<span class="font-medium">Status:</span>
@@ -224,6 +285,14 @@
 									</span>
 								{/if}
 							</div>
+							{#if service.details && Object.keys(service.details).length > 0}
+								<dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-400" data-testid="service-details-{serviceName}">
+									{#each Object.entries(service.details) as [key, value]}
+										<dt class="font-medium">{key}:</dt>
+										<dd class="font-mono break-all">{value}</dd>
+									{/each}
+								</dl>
+							{/if}
 							{#if service.error}
 								<div class="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
 									<p class="text-sm text-red-700 dark:text-red-300 font-mono">

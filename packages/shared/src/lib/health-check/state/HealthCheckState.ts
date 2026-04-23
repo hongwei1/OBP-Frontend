@@ -5,6 +5,7 @@ export interface HealthCheckSnapshot {
     error?: string;
     lastChecked: string; // ISO timestamp
     conecutiveFailures: number;
+    details?: Record<string, string | number>;
 }
 
 export class HealthCheckState {
