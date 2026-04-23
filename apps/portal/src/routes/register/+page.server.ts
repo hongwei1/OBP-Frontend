@@ -28,6 +28,14 @@ export const actions = {
             username: formEntries.username as string
         };
 
+        // Validate username length before hitting the API
+        if (requestBody.username.length < 8) {
+            return {
+                message: 'Username must be at least 8 characters long.',
+                formData: formDataToReturn
+            };
+        }
+
         // Make request to OBP to register the consumer
         try {
             const response = await obp_requests.post(`/obp/v6.0.0/users`, requestBody);
@@ -49,13 +57,13 @@ export const actions = {
             if (error instanceof OBPRequestError) {
                 // Return the OBP error message directly - it already contains the error code and description
                 return {
-                    error: error.message,
+                    message: error.message,
                     formData: formDataToReturn
                 };
             }
             logger.error("Error registering user:", error);
             return {
-                error: `Failed to register user: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                message: `Failed to register user: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 formData: formDataToReturn
             };
         }

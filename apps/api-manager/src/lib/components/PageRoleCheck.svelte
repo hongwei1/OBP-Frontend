@@ -10,15 +10,16 @@
     optional?: RoleRequirement[];
     requirementType?: "OR" | "AND";
     currentBankId?: string;
+    jitEnabled?: boolean;
     children?: Snippet;
   }
 
-  let { userEntitlements, required, optional, requirementType = "OR", currentBankId, children }: Props =
+  let { userEntitlements, required, optional, requirementType = "OR", currentBankId, jitEnabled = false, children }: Props =
     $props();
 
   // Check required roles using the configured logic (AND or OR)
   let requiredCheck = $derived.by(() => {
-    return checkRoles(userEntitlements || [], required || [], currentBankId, requirementType);
+    return checkRoles(userEntitlements || [], required || [], currentBankId, requirementType, jitEnabled);
   });
 
   let showContent = $derived(requiredCheck.hasAllRoles);
@@ -51,7 +52,7 @@
   // Check optional roles (informational — content still renders)
   let optionalCheck = $derived.by(() => {
     if (!optional || optional.length === 0) return null;
-    return checkRoles(userEntitlements || [], optional, currentBankId);
+    return checkRoles(userEntitlements || [], optional, currentBankId, "OR", jitEnabled);
   });
 
   let missingOptionalRoles = $derived(
@@ -84,6 +85,14 @@
 {/if}
 
 {#if showContent && children}
+  {#if requiredCheck.jitRoles.length > 0}
+    <div class="jit-note" data-testid="jit-entitlements-note">
+      <span class="note-icon">&#x26A1;</span>
+      <span>
+        Just In Time Entitlements active: {requiredCheck.jitRoles.map((r) => r.role).join(", ")} will be auto-granted on first use.
+      </span>
+    </div>
+  {/if}
   {#if scopeMessage}
     <div class="scope-note">
       <span class="note-icon">&#x2139;&#xFE0F;</span>
@@ -175,6 +184,26 @@
     background: rgba(217, 119, 6, 0.1);
     border-color: rgba(217, 119, 6, 0.3);
     color: #fbbf24;
+  }
+
+  .jit-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 0.5rem;
+    color: #166534;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  :global([data-mode="dark"]) .jit-note {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #4ade80;
   }
 
   .optional-role-note {

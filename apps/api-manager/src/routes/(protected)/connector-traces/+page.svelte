@@ -131,16 +131,16 @@
     timestampColorIndex = (timestampColorIndex + 1) % 2;
 
     try {
-      const response = await trackedFetch(`/api/connector-traces?${currentQueryString}`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/management/connector/traces?${currentQueryString}`);
       const responseData = await response.json();
       lastCorrelationId = responseData.correlation_id || "N/A";
 
       // Always store the raw response for debugging
       rawResponse = responseData;
 
-      if (responseData.error) {
-        loadError = responseData.error;
-        loadErrorCode = responseData.obpErrorCode || "";
+      if (responseData.message) {
+        loadError = responseData.message;
+        loadErrorCode = responseData.code || "";
         metrics = [];
         // Increment error count and pause auto-refresh after errors
         consecutiveErrors++;

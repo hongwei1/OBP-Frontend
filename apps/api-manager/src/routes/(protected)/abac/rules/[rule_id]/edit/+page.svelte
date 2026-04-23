@@ -62,7 +62,7 @@
     schemaLoading = true;
     schemaError = null;
     try {
-      const response = await fetch("/api/abac-rules/schema");
+      const response = await fetch("/proxy/obp/v6.0.0/management/abac-rules-schema");
       const schema = await response.json();
 
       console.log("!!! SCHEMA FETCH RESPONSE !!!");
@@ -84,7 +84,7 @@
         const errorParts = [
           `Status: ${response.status}`,
           `Error: ${schema.error || schema.errorMessage || "Unknown"}`,
-          `API Manager Proxy: /api/abac-rules/schema`,
+          `API Manager Proxy: /proxy/obp/v6.0.0/management/abac-rules-schema`,
           `OBP Endpoint: ${schema.endpoint || "/obp/v6.0.0/management/abac-rules-schema"}`,
           `\n\nFull Details:\n${JSON.stringify(schema, null, 2)}`,
         ];
@@ -302,7 +302,7 @@
     validationStatus = "validating";
 
     try {
-      const response = await fetch("/api/abac-rules/validate", {
+      const response = await fetch("/proxy/obp/v6.0.0/management/abac-rules/validate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -429,7 +429,7 @@
 
       requestBody.policy = formPolicy;
 
-      const response = await fetch(`/api/abac-rules/${data.ruleId}`, {
+      const response = await fetch(`/backend/abac-rules/${data.ruleId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

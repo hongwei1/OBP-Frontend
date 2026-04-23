@@ -27,7 +27,7 @@
 
     try {
       const response = await trackedFetch(
-        `/api/rbac/groups/${group.group_id}`,
+        `/proxy/obp/v6.0.0/management/groups/${group.group_id}`,
         {
           method: "DELETE",
         },
@@ -35,7 +35,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete group");
+        throw new Error(errorData.message);
       }
 
       toast.success(

@@ -81,7 +81,7 @@
         requestBody.bank_id = bankId.trim();
       }
 
-      const response = await trackedFetch("/api/rbac/groups", {
+      const response = await trackedFetch("/backend/rbac/groups", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -91,7 +91,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create group");
+        throw new Error(errorData.message);
       }
 
       toast.success("Group Created", `Successfully created group ${groupName}`);

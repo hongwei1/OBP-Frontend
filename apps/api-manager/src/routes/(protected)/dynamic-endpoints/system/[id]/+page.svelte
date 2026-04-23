@@ -7,6 +7,7 @@
     logErrorDetails,
   } from "$lib/utils/errorHandler";
   import { page } from "$app/stores";
+  import DynamicEndpointOperationsTable from "$lib/components/DynamicEndpointOperationsTable.svelte";
 
   let { data }: { data: PageData } = $props();
 
@@ -28,22 +29,7 @@
     };
   }
 
-  function getSwaggerPaths(): Array<{ path: string; methods: Array<{ method: string; summary: string; operationId: string }> }> {
-    if (!swagger?.paths) return [];
-
-    return Object.entries(swagger.paths).map(([path, pathObj]: [string, any]) => {
-      const methods = Object.entries(pathObj || {}).map(([method, methodObj]: [string, any]) => ({
-        method: method.toUpperCase(),
-        summary: methodObj?.summary || methodObj?.operationId || "No summary",
-        operationId: methodObj?.operationId || "",
-      }));
-
-      return { path, methods };
-    });
-  }
-
   const info = getSwaggerInfo();
-  const paths = getSwaggerPaths();
 
   // Host update state
   let newHost = $state(info.host);
@@ -63,7 +49,7 @@
 
     try {
       const response = await fetch(
-        `/api/dynamic-endpoints/system/${endpoint.dynamic_endpoint_id}/host`,
+        `/backend/dynamic-endpoints/system/${endpoint.dynamic_endpoint_id}/host`,
         {
           method: "PUT",
           headers: {
@@ -106,7 +92,7 @@
 
     try {
       const response = await fetch(
-        `/api/dynamic-endpoints/system/${endpoint.dynamic_endpoint_id}`,
+        `/proxy/obp/v6.0.0/management/dynamic-endpoints/${endpoint.dynamic_endpoint_id}`,
         {
           method: "DELETE",
         },
@@ -163,16 +149,6 @@
     URL.revokeObjectURL(url);
   }
 
-  function getMethodBadgeColor(method: string): string {
-    const colorMap: Record<string, string> = {
-      GET: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      POST: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      PUT: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      PATCH: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-      DELETE: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    };
-    return colorMap[method] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-  }
 </script>
 
 <svelte:head>
@@ -369,81 +345,9 @@
     {/if}
   </div>
 
-  <!-- Paths Section -->
-  <div
-    class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
-  >
-    <div class="border-b border-gray-200 p-6 dark:border-gray-700">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-        API Paths
-      </h2>
-      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-        {paths.length} path{paths.length === 1 ? "" : "s"} defined
-      </p>
-    </div>
-
-    {#if paths.length === 0}
-      <div class="flex flex-col items-center justify-center py-12 text-center">
-        <svg
-          class="mb-4 h-16 w-16 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
-          No Paths Defined
-        </h3>
-        <p class="text-gray-600 dark:text-gray-400">
-          This endpoint has no paths defined in its swagger specification.
-        </p>
-      </div>
-    {:else}
-      <div class="divide-y divide-gray-200 dark:divide-gray-700">
-        {#each paths as pathDef}
-          <div class="p-6">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <h3
-                    class="font-mono text-base font-semibold text-gray-900 dark:text-gray-100"
-                  >
-                    {pathDef.path}
-                  </h3>
-                </div>
-                <div class="mt-3 space-y-2">
-                  {#each pathDef.methods as methodDef}
-                    <div class="flex items-center gap-3">
-                      <span
-                        class="inline-flex w-16 items-center justify-center rounded px-2 py-0.5 text-xs font-medium {getMethodBadgeColor(
-                          methodDef.method,
-                        )}"
-                      >
-                        {methodDef.method}
-                      </span>
-                      <span class="text-sm text-gray-700 dark:text-gray-300">
-                        {methodDef.summary}
-                      </span>
-                      {#if methodDef.operationId}
-                        <span class="font-mono text-xs text-gray-500 dark:text-gray-500">
-                          ({methodDef.operationId})
-                        </span>
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    {/if}
+  <!-- Operations Section -->
+  <div class="mb-6">
+    <DynamicEndpointOperationsTable {swagger} validations={data.validations || []} mappings={data.mappings || []} />
   </div>
 
   <!-- Raw Swagger View -->

@@ -489,8 +489,8 @@
 									{fromatDateFromISO(opeyConsentInfo.last_usage_date)}
 								</li>
 							{/if}
-							{#if opeyConsentInfo.jwt_payload?.exp}
-								{@const jwtExp = formatJwtExpiration(opeyConsentInfo.jwt_payload?.exp * 1000)}
+							{#if opeyConsentInfo.jwt_expires_at}
+								{@const jwtExp = formatJwtExpiration(new Date(opeyConsentInfo.jwt_expires_at).getTime())}
 								<li>
 									<strong class="text-tertiary-400">JWT Expires:</strong>
 									{jwtExp.formatted}

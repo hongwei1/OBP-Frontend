@@ -18,7 +18,7 @@
 	let privacyAccepted = $state(false);
 	let showPassword = $state(false);
 	let passwordVisibilityType = $derived.by(() => (showPassword ? 'text' : 'password'));
-	let showError = $state(!!form?.error);
+	let showError = $state(!!form?.message);
 
 	// Clear error when username or password fields are modified
 	function handleUsernameInput() {
@@ -60,11 +60,17 @@
 
 	let isPasswordValid = $derived(checkPasswordAgainstPolicy(password));
 	let arePasswordsMatching = $derived(checkPasswordsMatching());
+	let isUsernameValid = $derived(username.length >= 8);
 
 	function handleSubmit(event: Event) {
 		if (!termsAccepted || !privacyAccepted) {
 			event.preventDefault();
 			alert('Please accept both the Terms of Service and Privacy Policy to continue.');
+			return;
+		}
+
+		if (!isUsernameValid) {
+			event.preventDefault();
 			return;
 		}
 
@@ -88,7 +94,7 @@
 	}
 
 	let canSubmit = $derived(
-		termsAccepted && privacyAccepted && password === repeatPassword && password.length > 0
+		termsAccepted && privacyAccepted && password === repeatPassword && password.length > 0 && isUsernameValid
 	);
 </script>
 
@@ -100,9 +106,9 @@
 	</header>
 	<article class="space-y-4 p-4">
 		<form class="mx-auto w-full max-w-md space-y-6" method="POST">
-			{#if showError && form?.error}
-				<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center">
-					<p class="text-error-500 font-semibold">{form?.error}</p>
+			{#if showError && form?.message}
+				<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center" data-testid="registration-error">
+					<p class="text-error-500 font-semibold">{form?.message}</p>
 				</div>
 			{/if}
 			<!-- --- -->
@@ -130,7 +136,10 @@
 			<!-- --- -->
 			<label class="label">
 				<span class="label-text">Username</span>
-				<input type="text" class="input" name="username" placeholder="coffeespoon123" bind:value={username} oninput={handleUsernameInput} required />
+				<input type="text" class="input" name="username" placeholder="coffeespoon123" bind:value={username} oninput={handleUsernameInput} minlength="8" required />
+				{#if username.length > 0 && !isUsernameValid}
+					<p class="text-error-500 text-xs">Username must be at least 8 characters long.</p>
+				{/if}
 			</label>
 
 			<label class="label">
@@ -281,9 +290,9 @@
 				</div>
 			</div>
 			<hr class="hr" />
-			{#if showError && form?.error}
-				<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center">
-					<p class="text-error-500 font-semibold">{form?.error}</p>
+			{#if showError && form?.message}
+				<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center" data-testid="registration-error">
+					<p class="text-error-500 font-semibold">{form?.message}</p>
 				</div>
 			{/if}
 			<button
@@ -291,6 +300,7 @@
 				disabled={!canSubmit}
 				class="btn preset-filled-primary-500 mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50"
 				aria-label="submit"
+				data-testid="submit-registration"
 			>
 				{#if !termsAccepted || !privacyAccepted}
 					Please Accept Legal Documents

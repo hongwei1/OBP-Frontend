@@ -46,7 +46,9 @@ export async function load(event: RequestEvent) {
 					consent: existingConsent
 				}
 				
-				logger.debug(`Active Opey consent found: ${JSON.stringify(existingConsent)}`);
+				// Don't JSON.stringify the whole consent — it's too large for the log.
+				// logger.debug(`Active Opey consent found: ${JSON.stringify(existingConsent)}`);
+				logger.debug(`Active Opey consent found (id: ${existingConsent?.consent_id ?? 'unknown'})`);
 			} else {
 				opeyConsentInfo = {
 					hasActiveConsent: false,

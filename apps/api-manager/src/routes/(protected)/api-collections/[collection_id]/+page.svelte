@@ -41,7 +41,7 @@
 
     try {
       const response = await trackedFetch(
-        `/api/api-collections/${collection.api_collection_id}/endpoints`,
+        `/backend/api-collections/${collection.api_collection_id}/endpoints`,
         {
           method: "POST",
           headers: {
@@ -55,7 +55,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add endpoint");
+        throw new Error(errorData.message);
       }
 
       toast.success("Endpoint Added", `Added ${newOperationId} to collection`);
@@ -80,7 +80,7 @@
 
     try {
       const response = await trackedFetch(
-        `/api/api-collections/${collection.api_collection_id}/endpoints/${endpointId}`,
+        `/proxy/obp/v6.0.0/my/api-collection-ids/${collection.api_collection_id}/api-collection-endpoint-ids/${endpointId}`,
         {
           method: "DELETE",
         },
@@ -88,7 +88,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to remove endpoint");
+        throw new Error(errorData.message);
       }
 
       toast.success(

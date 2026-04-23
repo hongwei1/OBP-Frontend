@@ -111,7 +111,7 @@
           .filter((v: string) => v);
       }
 
-      const response = await fetch(`/api/system-views/${data.view?.view_id}`, {
+      const response = await fetch(`/backend/system-views/${data.view?.view_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

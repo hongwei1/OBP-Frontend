@@ -107,15 +107,15 @@
     timestampColorIndex = (timestampColorIndex + 1) % 2;
 
     try {
-      const response = await trackedFetch(`/api/connector-metrics?${currentQueryString}`);
+      const response = await trackedFetch(`/backend/connector-metrics?${currentQueryString}`);
       const responseData = await response.json();
       lastCorrelationId = responseData.correlation_id || "N/A";
 
       // Always store the raw response for debugging
       rawResponse = responseData;
 
-      if (responseData.error) {
-        loadError = responseData.error;
+      if (responseData.message) {
+        loadError = responseData.message;
         metrics = [];
         // Increment error count and pause auto-refresh after errors
         consecutiveErrors++;

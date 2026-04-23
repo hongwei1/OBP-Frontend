@@ -30,6 +30,8 @@ export interface RoleCheckResult {
   hasAllRoles: boolean;
   missingRoles: RoleRequirement[];
   hasRoles: RoleRequirement[];
+  /** Roles the user doesn't explicitly have, but JIT will auto-grant on use */
+  jitRoles: RoleRequirement[];
 }
 
 /**
@@ -80,6 +82,9 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
   },
   "/rbac/groups/[group_id]": {
     required: [{ role: "CanGetEntitlementsForAnyBank" }],
+  },
+  "/rbac/groups/[group_id]/edit": {
+    required: [{ role: "CanUpdateGroupAtAllBanks" }],
   },
   "/rbac/groups/[group_id]/delete": {
     required: [{ role: "CanDeleteGroupAtAllBanks" }],
@@ -143,6 +148,25 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
   // ── Products ────────────────────────────────────────────
   "/products/financial": {
     required: [],
+  },
+  "/products/financial/all-banks": {
+    required: [],
+  },
+  "/products/financial/create": {
+    required: [{ role: "CanCreateProduct", bankScoped: true }],
+    optional: [{ role: "CanCreateProductAttribute", bankScoped: true }],
+  },
+  "/products/financial/[bank_id]/[product_code]": {
+    required: [],
+  },
+  "/products/financial/[bank_id]/[product_code]/edit": {
+    required: [{ role: "CanCreateProduct", bankScoped: true }],
+    optional: [
+      { role: "CanCreateProductAttribute", bankScoped: true },
+      { role: "CanUpdateProductAttribute", bankScoped: true },
+      { role: "CanUpdateProductTagsAtOneBank", bankScoped: true },
+      { role: "CanUpdateProductTagsAtAnyBank" },
+    ],
   },
   "/products/collections": {
     required: [],
@@ -287,9 +311,114 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
     ],
   },
 
+  // ── Chat Rooms ────────────────────────────────────────
+  "/chat-rooms/system": {
+    required: [],
+  },
+  "/chat-rooms/bank": {
+    required: [],
+  },
+  "/chat-rooms/[chat_room_id]": {
+    required: [],
+  },
+  "/chat-rooms/[chat_room_id]/edit": {
+    required: [
+      { role: "CanSetSystemChatRoomIsOpenRoom" },
+      { role: "CanSetBankChatRoomIsOpenRoom", bankScoped: true },
+    ],
+    requirementType: "OR",
+  },
+
   // ── Dynamic Entities ──────────────────────────────────
   "/dynamic-entities/diagnostics": {
     required: [{ role: "CanGetSystemLevelDynamicEntities" }],
+  },
+
+  // ── Dynamic Endpoints ─────────────────────────────────
+  "/dynamic-endpoints/system": {
+    required: [{ role: "CanGetDynamicEndpoints" }],
+    optional: [
+      { role: "CanCreateDynamicEndpoint" },
+      { role: "CanDeleteDynamicEndpoint" },
+    ],
+  },
+  "/dynamic-endpoints/system/[id]": {
+    required: [{ role: "CanGetDynamicEndpoints" }],
+    optional: [
+      { role: "CanUpdateDynamicEndpoint" },
+      { role: "CanDeleteDynamicEndpoint" },
+      { role: "CanCreateJsonSchemaValidation" },
+      { role: "CanUpdateJsonSchemaValidation" },
+      { role: "CanDeleteJsonSchemaValidation" },
+      { role: "CanGetAllEndpointMappings" },
+      { role: "CanCreateEndpointMapping" },
+      { role: "CanUpdateEndpointMapping" },
+      { role: "CanDeleteEndpointMapping" },
+    ],
+  },
+  "/dynamic-endpoints/system/create": {
+    required: [{ role: "CanCreateDynamicEndpoint" }],
+  },
+  "/dynamic-endpoints/bank": {
+    required: [
+      { role: "CanGetBankLevelDynamicEndpoints", bankScoped: true },
+      { role: "CanGetDynamicEndpoints" },
+    ],
+    optional: [
+      { role: "CanCreateBankLevelDynamicEndpoint", bankScoped: true },
+      { role: "CanCreateDynamicEndpoint" },
+      { role: "CanDeleteBankLevelDynamicEndpoint", bankScoped: true },
+      { role: "CanDeleteDynamicEndpoint" },
+    ],
+  },
+  "/dynamic-endpoints/bank/[bank_id]/[id]": {
+    required: [
+      { role: "CanGetBankLevelDynamicEndpoints", bankScoped: true },
+      { role: "CanGetDynamicEndpoints" },
+    ],
+    optional: [
+      { role: "CanUpdateBankLevelDynamicEndpoint", bankScoped: true },
+      { role: "CanUpdateDynamicEndpoint" },
+      { role: "CanDeleteBankLevelDynamicEndpoint", bankScoped: true },
+      { role: "CanDeleteDynamicEndpoint" },
+      { role: "CanCreateJsonSchemaValidation" },
+      { role: "CanUpdateJsonSchemaValidation" },
+      { role: "CanDeleteJsonSchemaValidation" },
+      { role: "CanGetAllBankLevelEndpointMappings", bankScoped: true },
+      { role: "CanGetAllEndpointMappings" },
+      { role: "CanCreateBankLevelEndpointMapping", bankScoped: true },
+      { role: "CanCreateEndpointMapping" },
+      { role: "CanUpdateBankLevelEndpointMapping", bankScoped: true },
+      { role: "CanUpdateEndpointMapping" },
+      { role: "CanDeleteBankLevelEndpointMapping", bankScoped: true },
+      { role: "CanDeleteEndpointMapping" },
+    ],
+  },
+  "/dynamic-endpoints/bank/[bank_id]/create": {
+    required: [
+      { role: "CanCreateBankLevelDynamicEndpoint", bankScoped: true },
+      { role: "CanCreateDynamicEndpoint" },
+    ],
+  },
+
+  // ── Dynamic Resource Docs ─────────────────────────────
+  "/dynamic-resource-docs/system": {
+    required: [{ role: "CanGetDynamicResourceDoc" }],
+    optional: [
+      { role: "CanCreateDynamicResourceDoc" },
+      { role: "CanUpdateDynamicResourceDoc" },
+      { role: "CanDeleteDynamicResourceDoc" },
+    ],
+  },
+  "/dynamic-resource-docs/system/create": {
+    required: [{ role: "CanCreateDynamicResourceDoc" }],
+  },
+  "/dynamic-resource-docs/system/[id]": {
+    required: [{ role: "CanGetDynamicResourceDoc" }],
+    optional: [
+      { role: "CanUpdateDynamicResourceDoc" },
+      { role: "CanDeleteDynamicResourceDoc" },
+    ],
   },
 };
 
@@ -303,12 +432,54 @@ export function getPageRoles(routeId: string): PageRoleConfig | undefined {
 }
 
 /**
+ * Roles excluded from JIT auto-granting (to prevent privilege escalation).
+ */
+const JIT_EXCLUDED_ROLES = new Set([
+  "CanCreateEntitlementAtOneBank",
+  "CanCreateEntitlementAtAnyBank",
+]);
+
+/**
+ * Check whether JIT can cover a missing role for this user.
+ * JIT requires:
+ * - JIT feature enabled on the OBP instance
+ * - User holds CanCreateEntitlementAtAnyBank (system-wide), OR
+ *   CanCreateEntitlementAtOneBank for the relevant bank (bank-scoped roles)
+ * - The missing role is not one of the excluded meta-roles
+ */
+function canJitGrant(
+  requirement: RoleRequirement,
+  userEntitlements: UserEntitlement[],
+  currentBankId?: string,
+): boolean {
+  if (JIT_EXCLUDED_ROLES.has(requirement.role)) return false;
+
+  // CanCreateEntitlementAtAnyBank covers everything
+  const hasAnyBank = userEntitlements.some(
+    (e) => e.role_name === "CanCreateEntitlementAtAnyBank",
+  );
+  if (hasAnyBank) return true;
+
+  // For bank-scoped roles, CanCreateEntitlementAtOneBank at the relevant bank also works
+  if (requirement.bankScoped || requirement.bankId) {
+    const bankId = requirement.bankId || currentBankId;
+    if (!bankId) return false;
+    return userEntitlements.some(
+      (e) => e.role_name === "CanCreateEntitlementAtOneBank" && e.bank_id === bankId,
+    );
+  }
+
+  return false;
+}
+
+/**
  * Check if a user has the required roles.
  *
  * @param userEntitlements - List of entitlements the user has
  * @param requiredRoles - List of roles to check
  * @param currentBankId - The currently selected bank ID (for bankScoped role checks)
  * @param requirementType - "OR" (default): user needs at least one; "AND": user needs all
+ * @param jitEnabled - Whether Just In Time entitlements are enabled on this OBP instance
  * @returns RoleCheckResult with missing and present roles
  */
 export function checkRoles(
@@ -316,9 +487,11 @@ export function checkRoles(
   requiredRoles: RoleRequirement[],
   currentBankId?: string,
   requirementType: "OR" | "AND" = "OR",
+  jitEnabled: boolean = false,
 ): RoleCheckResult {
   const missingRoles: RoleRequirement[] = [];
   const hasRoles: RoleRequirement[] = [];
+  const jitRoles: RoleRequirement[] = [];
 
   for (const requirement of requiredRoles) {
     const hasRole = userEntitlements.some((entitlement) => {
@@ -340,22 +513,27 @@ export function checkRoles(
 
     if (hasRole) {
       hasRoles.push(requirement);
+    } else if (jitEnabled && canJitGrant(requirement, userEntitlements, currentBankId)) {
+      jitRoles.push(requirement);
     } else {
       missingRoles.push(requirement);
     }
   }
 
   logger.debug(
-    `Role check (${requirementType}): ${hasRoles.length}/${requiredRoles.length} roles present`,
+    `Role check (${requirementType}): ${hasRoles.length} present, ${jitRoles.length} JIT-covered, ${missingRoles.length} missing / ${requiredRoles.length} total`,
   );
+
+  // JIT-covered roles count as "effectively has" for access decisions
+  const effectiveHasCount = hasRoles.length + jitRoles.length;
 
   let hasAccess: boolean;
   if (requirementType === "AND") {
-    // AND: user needs ALL required roles
+    // AND: user needs ALL required roles (explicitly or via JIT)
     hasAccess = requiredRoles.length === 0 || missingRoles.length === 0;
   } else {
-    // OR: user needs at least one of the required roles
-    hasAccess = requiredRoles.length === 0 || hasRoles.length > 0;
+    // OR: user needs at least one of the required roles (explicitly or via JIT)
+    hasAccess = requiredRoles.length === 0 || effectiveHasCount > 0;
   }
 
   if (!hasAccess) {
@@ -366,6 +544,7 @@ export function checkRoles(
     hasAllRoles: hasAccess,
     missingRoles: hasAccess ? [] : missingRoles,
     hasRoles,
+    jitRoles,
   };
 }
 

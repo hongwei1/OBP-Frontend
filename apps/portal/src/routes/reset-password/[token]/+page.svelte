@@ -57,9 +57,9 @@
 	</header>
 	<article class="space-y-4 p-4">
 		<form class="mx-auto w-full max-w-md space-y-6" method="POST">
-			{#if form?.error}
-				<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center">
-					<p class="text-error-500 font-semibold">{form.error}</p>
+			{#if form?.message}
+				<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center" data-testid="reset-password-error">
+					<p class="text-error-500 font-semibold">{form.message}</p>
 				</div>
 			{/if}
 
@@ -161,6 +161,7 @@
 				disabled={!canSubmit}
 				class="btn preset-filled-primary-500 mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50"
 				aria-label="Reset Password"
+				data-testid="submit-reset-password"
 			>
 				{#if !isPasswordValid}
 					Password Must Meet Requirements

@@ -45,12 +45,12 @@
 
     try {
       const response = await trackedFetch(
-        `/api/user-invitations/list?bank_id=${encodeURIComponent(selectedBankId)}`,
+        `/proxy/obp/v4.0.0/banks/${encodeURIComponent(selectedBankId)}/user-invitations`,
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to load invitations");
+        throw new Error(errorData.message);
       }
 
       const result = await response.json();
@@ -95,7 +95,7 @@
     isSubmitting = true;
 
     try {
-      const response = await trackedFetch("/api/user-invitations/create", {
+      const response = await trackedFetch("/backend/user-invitations/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -113,7 +113,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create invitation");
+        throw new Error(errorData.message);
       }
 
       const result = await response.json();

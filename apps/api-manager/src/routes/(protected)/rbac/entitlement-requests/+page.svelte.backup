@@ -71,7 +71,7 @@
 
     try {
       // Step 1: Create the entitlement
-      const createResponse = await fetch("/api/rbac/entitlements", {
+      const createResponse = await fetch("/backend/rbac/entitlements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -88,7 +88,7 @@
 
       // Step 2: Delete the entitlement request
       const deleteResponse = await fetch(
-        `/api/rbac/entitlement-requests/${requestId}`,
+        `/backend/rbac/entitlement-requests/${requestId}`,
         {
           method: "DELETE",
         },
@@ -119,7 +119,7 @@
 
     try {
       const response = await fetch(
-        `/api/rbac/entitlement-requests/${requestId}`,
+        `/backend/rbac/entitlement-requests/${requestId}`,
         {
           method: "DELETE",
         },

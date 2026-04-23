@@ -56,7 +56,7 @@ class RolesCache {
       this.state.loading = true;
       logger.info("Fetching roles from API");
 
-      const response = await fetch("/api/rbac/roles-metadata");
+      const response = await fetch("/proxy/obp/v6.0.0/roles");
       if (!response.ok) {
         throw new Error("Failed to fetch roles metadata");
       }

@@ -154,15 +154,6 @@
 		}
 	}
 
-	function toggleExpanded(operationId: string) {
-		if (expandedIds.has(operationId)) {
-			expandedIds.delete(operationId);
-		} else {
-			expandedIds.add(operationId);
-		}
-		expandedIds = new Set(expandedIds); // Trigger reactivity
-	}
-
 	function getMethodColor(method: string): string {
 		switch (method.toUpperCase()) {
 			case 'GET':
@@ -324,13 +315,9 @@
 		This page shows featured APIs collections and frequently used endpoints.
 	</p>
 
-	{#if data.error}
+	{#if data.message && data.endpoints?.length === 0}
 		<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-center dark:border-red-800 dark:bg-red-900/20">
-			<p class="text-red-600 dark:text-red-400">{data.error}</p>
-		</div>
-	{:else if data.message}
-		<div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center dark:border-blue-800 dark:bg-blue-900/20">
-			<p class="text-blue-600 dark:text-blue-400">{data.message}</p>
+			<p class="text-red-600 dark:text-red-400">{data.message}</p>
 		</div>
 	{:else if data.endpoints && data.endpoints.length > 0}
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

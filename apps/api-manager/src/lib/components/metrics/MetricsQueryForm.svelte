@@ -11,7 +11,7 @@
       direction: string;
       consumer_id: string;
       user_id: string;
-      user_name: string;
+      username: string;
       anon: string;
       url: string;
       app_name: string;
@@ -31,7 +31,9 @@
     showAutoRefresh?: boolean;
     showClearButton?: boolean;
     showRefreshButton?: boolean;
+    filtersExpanded?: boolean;
     headerActions?: Snippet;
+    transport?: "rest" | "grpc";
   }
 
   let {
@@ -44,475 +46,292 @@
     showAutoRefresh = true,
     showClearButton = true,
     showRefreshButton = true,
+    filtersExpanded = $bindable(false),
     headerActions,
+    transport = "rest",
   }: Props = $props();
 
+  const isGrpc = $derived(transport === "grpc");
+  const grpcUnsupported = "Not applicable on gRPC stream";
+
   function handleFieldChange() {
-    if (onFieldChange) {
-      onFieldChange();
-    }
-  }
-
-  function handleClear() {
-    if (onClear) {
-      onClear();
-    }
-  }
-
-  function handleRefresh() {
-    if (onRefresh) {
-      onRefresh();
-    }
+    onFieldChange();
   }
 
   function handleSubmit(e: Event) {
     e.preventDefault();
-    if (onSubmit) {
-      onSubmit();
-    }
+    onSubmit();
   }
 </script>
 
-<form onsubmit={handleSubmit} class="query-form">
-  <div class="form-section">
-    <div class="form-header">
-      <h3 class="form-section-title">Query Parameters</h3>
-      <div class="form-actions">
-        {#if showClearButton}
-          <button type="button" class="btn btn-secondary" onclick={handleClear}>
-            🗑️ Clear Form
-          </button>
-        {/if}
-        {#if showRefreshButton}
-          <button
-            type="button"
-            class="refresh-btn"
-            onclick={handleRefresh}
-            title="Manual refresh"
-          >
-            🔄
-          </button>
-        {/if}
-        {#if showAutoRefresh}
-          <label for="auto_refresh" class="auto-refresh-label">
-            Auto Refresh:
-          </label>
-          <select
-            id="auto_refresh"
-            bind:value={autoRefresh}
-            class="form-input auto-refresh-select"
-          >
-            <option value="none">None</option>
-            <option value="5">5 sec</option>
-            <option value="10">10 sec</option>
-            <option value="20">20 sec</option>
-            <option value="30">30 sec</option>
-            <option value="60">60 sec</option>
-            <option value="120">2 min</option>
-            <option value="600">10 min</option>
-            <option value="1200">20 min</option>
-            <option value="3600">60 min</option>
-          </select>
-        {/if}
-        {#if headerActions}
-          {@render headerActions()}
-        {/if}
-      </div>
-    </div>
-
-    <div class="form-row date-row">
-      <div class="form-field date-field">
-        <label for="from_date">From Date (UTC)</label>
-        <input
-          type="datetime-local"
-          id="from_date"
-          bind:value={queryForm.from_date}
-          onblur={handleFieldChange}
-          class="form-input"
-          step="1"
-        />
-      </div>
-      <div class="form-field date-field">
-        <label for="to_date">To Date (UTC)</label>
-        <input
-          type="datetime-local"
-          id="to_date"
-          bind:value={queryForm.to_date}
-          onblur={handleFieldChange}
-          class="form-input"
-          step="1"
-        />
-      </div>
-      <div class="form-field narrow-field">
-        <label for="limit">Limit</label>
-        <input
-          type="number"
-          id="limit"
-          bind:value={queryForm.limit}
-          min="1"
-          max="10000"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field narrow-field">
-        <label for="offset">Offset</label>
-        <input
-          type="number"
-          id="offset"
-          bind:value={queryForm.offset}
-          min="0"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field narrow-field">
-        <label for="sort_by">Sort By</label>
-        <select
-          id="sort_by"
-          bind:value={queryForm.sort_by}
-          onchange={handleFieldChange}
-          class="form-input"
-        >
+<form onsubmit={handleSubmit} class="qf">
+  {#if !isGrpc}
+    <!-- Row 1: time range, pagination, sort (REST only) -->
+    <div class="qf-bar qf-filters">
+      <label class="qf-inline"><span>From</span>
+        <input type="datetime-local" bind:value={queryForm.from_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="from_date" />
+      </label>
+      <label class="qf-inline"><span>To</span>
+        <input type="datetime-local" bind:value={queryForm.to_date} onblur={handleFieldChange} onchange={handleFieldChange} step="1" name="to_date" />
+      </label>
+      <label class="qf-inline qf-xs"><span>Limit</span>
+        <input type="number" bind:value={queryForm.limit} min="1" max="10000" onblur={handleFieldChange} onchange={handleFieldChange} name="limit" />
+      </label>
+      <label class="qf-inline qf-xs"><span>Offset</span>
+        <input type="number" bind:value={queryForm.offset} min="0" onblur={handleFieldChange} onchange={handleFieldChange} name="offset" />
+      </label>
+      <label class="qf-inline qf-sm"><span>Sort</span>
+        <select bind:value={queryForm.sort_by} onchange={handleFieldChange} name="sort_by">
           <option value="date">Date</option>
           <option value="url">URL</option>
-          <option value="user_name">User Name</option>
-          <option value="app_name">App Name</option>
+          <option value="username">User</option>
+          <option value="app_name">App</option>
           <option value="verb">Method</option>
-          <option value="duration">Duration</option>
+          <option value="developer_email">Dev Email</option>
+          <option value="consumer_id">Consumer</option>
+          <option value="implemented_by_partial_function">Fn</option>
+          <option value="implemented_in_version">Ver</option>
         </select>
-      </div>
-      <div class="form-field narrow-field">
-        <label for="direction">Direction</label>
-        <select
-          id="direction"
-          bind:value={queryForm.direction}
-          onchange={handleFieldChange}
-          class="form-input"
-        >
-          <option value="desc">Descending</option>
-          <option value="asc">Ascending</option>
+      </label>
+      <label class="qf-inline qf-xs"><span>Dir</span>
+        <select bind:value={queryForm.direction} onchange={handleFieldChange} name="direction">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
         </select>
-      </div>
-      <div class="form-field narrow-field">
-        <label for="verb">Method</label>
-        <select
-          id="verb"
-          bind:value={queryForm.verb}
-          onchange={handleFieldChange}
-          class="form-input"
-        >
-          <option value="">All Methods</option>
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="DELETE">DELETE</option>
-          <option value="PATCH">PATCH</option>
-        </select>
-      </div>
-      <div class="form-field narrow-field">
-        <label for="http_status_code">Code</label>
-        <select
-          id="http_status_code"
-          bind:value={queryForm.http_status_code}
-          onchange={handleFieldChange}
-          class="form-input"
-        >
-          <option value="">All Status Codes</option>
-          <option value="200">200 OK</option>
-          <option value="201">201 Created</option>
-          <option value="204">204 No Content</option>
-          <option value="400">400 Bad Request</option>
-          <option value="401">401 Unauthorized</option>
-          <option value="403">403 Forbidden</option>
-          <option value="404">404 Not Found</option>
-          <option value="500">500 Internal Server Error</option>
-          <option value="502">502 Bad Gateway</option>
-          <option value="503">503 Service Unavailable</option>
-        </select>
-      </div>
+      </label>
     </div>
+  {/if}
 
-    <div class="form-row">
-      <div class="form-field">
-        <label for="consumer_id">Consumer ID</label>
-        <input
-          type="text"
-          id="consumer_id"
-          bind:value={queryForm.consumer_id}
-          placeholder="Filter by consumer ID"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field">
-        <label for="app_name">App Name</label>
-        <input
-          type="text"
-          id="app_name"
-          bind:value={queryForm.app_name}
-          placeholder="Filter by app name"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field">
-        <label for="include_app_names">Include App Names</label>
-        <input
-          type="text"
-          id="include_app_names"
-          bind:value={queryForm.include_app_names}
-          placeholder="Comma-separated app names to include"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field">
-        <label for="user_name">User ID</label>
-        <input
-          type="text"
-          id="user_name"
-          bind:value={queryForm.user_name}
-          placeholder="Filter by user ID"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field">
-        <label for="implemented_by_partial_function">Partial Function</label>
-        <input
-          type="text"
-          id="implemented_by_partial_function"
-          bind:value={queryForm.implemented_by_partial_function}
-          placeholder="Filter by partial function"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field">
-        <label for="implemented_in_version">Version</label>
-        <input
-          type="text"
-          id="implemented_in_version"
-          bind:value={queryForm.implemented_in_version}
-          placeholder="Filter by version"
-          onblur={handleFieldChange}
-          class="form-input"
-        />
-      </div>
-      <div class="form-field narrow-field">
-        <label for="anon">Anonymous</label>
-        <select
-          id="anon"
-          bind:value={queryForm.anon}
-          onchange={handleFieldChange}
-          class="form-input"
-        >
-          <option value="">All Users</option>
-          <option value="true">Anonymous Only</option>
-          <option value="false">Authenticated Only</option>
+  <!-- Row 2: match filters (server-side) -->
+  <div class="qf-bar qf-filters">
+    <label class="qf-inline qf-sm"><span>Verb</span>
+      <select bind:value={queryForm.verb} onchange={handleFieldChange} name="verb">
+        <option value="">All</option>
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+        <option value="PUT">PUT</option>
+        <option value="DELETE">DEL</option>
+        <option value="PATCH">PATCH</option>
+      </select>
+    </label>
+    <label class="qf-inline qf-sm"><span>Code</span>
+      <select bind:value={queryForm.http_status_code} onchange={handleFieldChange} name="http_status_code">
+        <option value="">All</option>
+        <option value="200">200</option>
+        <option value="201">201</option>
+        <option value="204">204</option>
+        <option value="400">400</option>
+        <option value="401">401</option>
+        <option value="403">403</option>
+        <option value="404">404</option>
+        <option value="500">500</option>
+        <option value="502">502</option>
+        <option value="503">503</option>
+      </select>
+    </label>
+    <label class="qf-inline"><span>Consumer</span>
+      <input type="text" bind:value={queryForm.consumer_id} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="consumer_id" />
+    </label>
+    <label class="qf-inline"><span>App</span>
+      <input type="text" bind:value={queryForm.app_name} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="name" name="app_name" />
+    </label>
+    <label class="qf-inline"><span>Fn</span>
+      <input type="text" bind:value={queryForm.implemented_by_partial_function} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="partial fn" name="implemented_by_partial_function" />
+    </label>
+  </div>
+
+  <!-- Row 3: extra filters -->
+  <div class="qf-bar qf-filters">
+    {#if !isGrpc}
+      <label class="qf-inline"><span>Apps</span>
+        <input type="text" bind:value={queryForm.include_app_names} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="csv" name="include_app_names" />
+      </label>
+      <label class="qf-inline"><span>User</span>
+        <input type="text" bind:value={queryForm.username} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ID" name="username" />
+      </label>
+      <label class="qf-inline qf-sm"><span>Ver</span>
+        <input type="text" bind:value={queryForm.implemented_in_version} onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ver" name="implemented_in_version" />
+      </label>
+    {/if}
+    <label class="qf-inline qf-sm"><span>Min Duration</span>
+      <input type="number" bind:value={queryForm.duration} min="0" onblur={handleFieldChange} onchange={handleFieldChange} placeholder="ms" name="duration" />
+    </label>
+    {#if !isGrpc}
+      <label class="qf-inline qf-sm"><span>Anon</span>
+        <select bind:value={queryForm.anon} onchange={handleFieldChange} name="anon">
+          <option value="">All</option>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
         </select>
+      </label>
+    {/if}
+    <button type="submit" hidden>Submit</button>
+    {#if showClearButton}
+      <div class="qf-actions">
+        <button type="button" class="qf-btn" onclick={onClear} title="Clear form">🗑️ Clear</button>
       </div>
-    </div>
+    {/if}
   </div>
 </form>
 
 <style>
-  .query-form {
+  .qf {
     width: 100%;
   }
 
-  .form-section {
+  .qf-bar {
     display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .form-header {
-    display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    margin-bottom: 0;
-  }
-
-  .form-section-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-surface-700);
-    margin: 0;
-  }
-
-  :global([data-mode="dark"]) .form-section-title {
-    color: var(--color-surface-300);
-  }
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    border-radius: 0.375rem;
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-secondary {
-    background: var(--color-surface-200);
-    color: var(--color-surface-700);
-    border-color: var(--color-surface-300);
-  }
-
-  .btn-secondary:hover {
-    background: var(--color-surface-300);
-  }
-
-  :global([data-mode="dark"]) .btn-secondary {
-    background: rgb(var(--color-surface-700));
-    color: var(--color-surface-200);
-    border-color: rgb(var(--color-surface-600));
-  }
-
-  :global([data-mode="dark"]) .btn-secondary:hover {
-    background: rgb(var(--color-surface-600));
-  }
-
-  .refresh-btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 1rem;
-    background: transparent;
-    border: 1px solid var(--color-surface-300);
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .refresh-btn:hover {
+    gap: 0.25rem 0.5rem;
+    padding: 0.35rem 0.5rem;
     background: var(--color-surface-100);
-    transform: rotate(90deg);
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.25rem;
   }
 
-  :global([data-mode="dark"]) .refresh-btn {
+  :global([data-mode="dark"]) .qf-bar {
+    background: rgb(var(--color-surface-800));
     border-color: rgb(var(--color-surface-600));
   }
 
-  :global([data-mode="dark"]) .refresh-btn:hover {
-    background: rgb(var(--color-surface-700));
+  .qf-filters {
+    margin-top: 0.25rem;
   }
 
-  .auto-refresh-label {
-    font-size: 0.875rem;
-    margin: 0;
-    color: var(--color-surface-700);
-  }
-
-  :global([data-mode="dark"]) .auto-refresh-label {
+  .qf-divider {
     color: var(--color-surface-300);
+    user-select: none;
   }
 
-  .auto-refresh-select {
-    font-size: 0.875rem;
-    padding: 0.375rem 0.5rem;
-    min-width: 90px;
+  :global([data-mode="dark"]) .qf-divider {
+    color: rgb(var(--color-surface-600));
   }
 
-  .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .form-row.date-row {
-    grid-template-columns: 240px 260px 80px 80px 80px 80px 80px 80px;
-    gap: 1rem;
-  }
-
-  .form-field {
-    display: flex;
-    flex-direction: column;
+  .qf-inline {
+    display: inline-flex;
+    align-items: center;
     gap: 0.25rem;
+    margin: 0;
+    cursor: default;
   }
 
-  .form-field.date-field {
-    min-width: 240px;
-    max-width: 260px;
-  }
-
-  .form-field.narrow-field {
-    max-width: 80px;
-  }
-
-  .form-field label {
-    font-size: 0.875rem;
+  .qf-inline span {
+    color: var(--color-surface-500);
+    font-size: 0.8rem;
     font-weight: 500;
-    color: var(--color-surface-700);
-    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    user-select: none;
   }
 
-  :global([data-mode="dark"]) .form-field label {
-    color: var(--color-surface-300);
+  :global([data-mode="dark"]) .qf-inline span {
+    color: var(--color-surface-400);
   }
 
-  .form-input {
-    padding: 0.5rem;
+  .qf-inline input,
+  .qf-inline select {
+    padding: 0.2rem 0.3rem;
     border: 1px solid var(--color-surface-300);
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
+    border-radius: 0.2rem;
+    font-size: 0.8rem;
     background: white;
     color: var(--color-surface-900);
-    transition: border-color 0.2s;
+    line-height: 1.2;
   }
 
-  .form-input:focus {
-    outline: none;
-    border-color: var(--color-primary-500);
-    ring: 2px;
-    ring-color: rgba(59, 130, 246, 0.2);
-  }
-
-  :global([data-mode="dark"]) .form-input {
-    background: rgb(var(--color-surface-800));
+  :global([data-mode="dark"]) .qf-inline input,
+  :global([data-mode="dark"]) .qf-inline select {
+    background: rgb(var(--color-surface-900));
     border-color: rgb(var(--color-surface-600));
     color: var(--color-surface-100);
   }
 
-  :global([data-mode="dark"]) .form-input:focus {
-    border-color: rgb(var(--color-primary-400));
+  .qf-inline input:focus,
+  .qf-inline select:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
   }
 
-  @media (max-width: 1400px) {
-    .form-row.date-row {
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
+  .qf-inline input[type="datetime-local"] {
+    width: 11rem;
+  }
+
+  .qf-inline input[type="number"] {
+    width: 3.5rem;
+  }
+
+  .qf-inline input[type="text"] {
+    width: 6rem;
+  }
+
+  .qf-tiny input[type="number"] {
+    width: 3rem;
+  }
+
+  .qf-xs select {
+    width: 3.5rem;
+  }
+
+  .qf-sm select,
+  .qf-sm input {
+    width: 4.5rem;
+  }
+
+  .qf-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+  }
+
+  .qf-btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+    background: transparent;
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.2rem;
+    cursor: pointer;
+    color: var(--color-surface-600);
+    white-space: nowrap;
+  }
+
+  .qf-btn:hover {
+    background: var(--color-surface-200);
+    color: var(--color-surface-800);
+  }
+
+  :global([data-mode="dark"]) .qf-btn {
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-400);
+  }
+
+  :global([data-mode="dark"]) .qf-btn:hover {
+    background: rgb(var(--color-surface-700));
+    color: var(--color-surface-200);
+  }
+
+  .qf-sel {
+    padding: 0.2rem 0.3rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.2rem;
+    background: white;
+    color: var(--color-surface-700);
+  }
+
+  :global([data-mode="dark"]) .qf-sel {
+    background: rgb(var(--color-surface-900));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-300);
   }
 
   @media (max-width: 768px) {
-    .form-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
+    .qf-inline input[type="datetime-local"] {
+      width: 9rem;
     }
 
-    .form-actions {
-      width: 100%;
-      flex-wrap: wrap;
-    }
-
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-
-    .form-row.date-row {
-      grid-template-columns: 1fr;
-    }
-
-    .form-field.date-field,
-    .form-field.narrow-field {
-      max-width: 100%;
+    .qf-inline input[type="text"] {
+      width: 5rem;
     }
   }
 </style>

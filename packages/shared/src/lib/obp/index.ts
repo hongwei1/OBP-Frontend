@@ -1,5 +1,5 @@
 export { OBPRequests, createOBPRequests } from './requests.js';
-export { OBPErrorBase, OBPRequestError, OBPRateLimitError, OBPTimeoutError } from './errors.js';
+export { OBPErrorBase, OBPRequestError, OBPRateLimitError, OBPTimeoutError, obpErrorResponse } from './errors.js';
 export type {
 	OBPBank,
 	OBPConsent,

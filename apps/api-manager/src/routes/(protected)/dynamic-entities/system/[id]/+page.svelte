@@ -99,7 +99,7 @@
         bank_id: "", // System-wide roles use empty string
       };
 
-      const response = await trackedFetch("/api/rbac/entitlement-requests", {
+      const response = await trackedFetch("/backend/rbac/entitlement-requests", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -110,7 +110,7 @@
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.error || "Failed to submit entitlement request",
+          errorData.message,
         );
       }
 
@@ -137,7 +137,7 @@
 
     try {
       const response = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}`,
         {
           method: "DELETE",
         },
@@ -201,14 +201,14 @@
 
     try {
       const response = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/backup`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/backup`,
         { method: "POST" },
       );
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(responseData.error || "Failed to backup entity");
+        throw new Error(responseData.message);
       }
 
       alert(`Backup created: ${responseData.entity_name}`);

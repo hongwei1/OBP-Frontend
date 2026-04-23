@@ -18,7 +18,6 @@ export interface DynamicEntityWithData {
 	hasPersonalEntity: boolean;
 	schema: Record<string, unknown>;
 	data: Record<string, unknown>[] | null;
-	dataError?: string;
 }
 
 export async function load(event: RequestEvent) {
@@ -59,28 +58,33 @@ export async function load(event: RequestEvent) {
 				data: null
 			};
 
-			if (entity.hasPersonalEntity && entity.entityName) {
+			if (entity.entityName) {
 				try {
+					const dataPath = entity.bankId
+						? `/obp/dynamic-entity/banks/${entity.bankId}/my/${entity.entityName}`
+						: `/obp/dynamic-entity/my/${entity.entityName}`;
 					const dataResponse = await obp_requests.get(
-						`/obp/dynamic-entity/my/${entity.entityName}`,
+						dataPath,
 						token
 					);
 					// API returns list key in snake_case format
 					const listKey = `${toSnakeCase(entity.entityName)}_list`;
 					entity.data = dataResponse[listKey] || [];
-				} catch (e: unknown) {
-					entity.dataError = e instanceof Error ? e.message : String(e);
+				} catch {
+					entity.data = [];
 				}
 			}
 
 			entitiesWithData.push(entity);
 		}
 
-		// Filter to only include entities with hasPersonalEntity: true
-		const personalEntities = entitiesWithData.filter(entity => entity.hasPersonalEntity);
+		// Only include entities where the current user has data
+		const entitiesWithRecords = entitiesWithData.filter(
+			entity => entity.data && entity.data.length > 0
+		);
 
 		// Deduplicate by dynamicEntityId
-		const uniqueEntities = personalEntities.filter(
+		const uniqueEntities = entitiesWithRecords.filter(
 			(entity, index, self) =>
 				index === self.findIndex(e => e.dynamicEntityId === entity.dynamicEntityId)
 		);

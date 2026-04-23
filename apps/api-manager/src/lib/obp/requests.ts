@@ -12,39 +12,22 @@ import { OBPErrorBase, OBPRequestError } from '$lib/obp/errors';
  *
  * IMPORTANT: Never simplify or hide OBP error messages - show them in full!
  */
+/**
+ * Extract error from OBP API response.
+ * OBP returns: { message: string, code: number }
+ * If the format doesn't match, surface what we got so the problem is visible.
+ */
 function extractOBPError(
   data: any,
   response: Response,
 ): { code?: string; message: string } {
-  // If data is a string, return it directly
-  if (typeof data === "string") {
-    return {
-      message: data || `HTTP ${response.status}: ${response.statusText}`,
-    };
+  if (data && typeof data === "object" && typeof data.message === "string") {
+    return { code: data.code != null ? String(data.code) : undefined, message: data.message };
   }
 
-  // If data is not an object, return status info
-  if (!data || typeof data !== "object") {
-    return { message: `HTTP ${response.status}: ${response.statusText}` };
-  }
-
-  // Extract code from various possible fields
-  const code = data.code || data.failCode || data.error_code;
-
-  // Extract message from various possible fields - NEVER use generic fallback if we have data!
-  const message =
-    data.message ||
-    data.failMsg ||
-    data.error ||
-    data.error_message ||
-    // If we have a code but no message, at least show the code
-    (code ? `Error code: ${code}` : null) ||
-    // If we have any other data, stringify it to show the full response
-    (Object.keys(data).length > 0
-      ? JSON.stringify(data)
-      : `HTTP ${response.status}: ${response.statusText}`);
-
-  return { code, message };
+  throw new Error(
+    `Unexpected error format from OBP API (HTTP ${response.status}): ${JSON.stringify(data)}`,
+  );
 }
 
 class OBPRequests {
@@ -59,6 +42,16 @@ class OBPRequests {
     this.base_url = base_url;
 
     logger.info("Initialized.");
+  }
+
+  async getResponse(endpoint: string, accessToken?: string): Promise<Response> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+    return fetch(`${this.base_url}${endpoint}`, { headers });
   }
 
   async get(endpoint: string, accessToken?: string): Promise<any> {
@@ -463,6 +456,10 @@ export const obp_requests = {
       obp_requests_instance = new OBPRequests(env.PUBLIC_OBP_BASE_URL);
     }
     return obp_requests_instance;
+  },
+
+  getResponse: function (endpoint: string, accessToken?: string) {
+    return this.instance.getResponse(endpoint, accessToken);
   },
 
   get: function (endpoint: string, accessToken?: string) {

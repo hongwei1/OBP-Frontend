@@ -16,7 +16,7 @@
     loading = true;
     error = null;
     try {
-      const res = await trackedFetch(`/api/obp/banks/${encodeURIComponent(bankId)}/accounts`);
+      const res = await trackedFetch(`/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/accounts`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to fetch accounts");

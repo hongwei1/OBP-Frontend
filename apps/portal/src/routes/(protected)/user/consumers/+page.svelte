@@ -18,38 +18,9 @@
 	}
 </script>
 
-<h1 class="text-gray-900 dark:text-gray-100">API Consumers</h1>
-
-<p class="mb-4 text-gray-700 dark:text-gray-300">
-	Here you can view your registered API consumers.
+<p class="mb-6 text-sm text-gray-700 dark:text-gray-300">
+	Keys and secrets are shown only at creation. If lost, <a href="/consumers/register" class="underline hover:text-gray-900 dark:hover:text-gray-100">register a new consumer</a>.
 </p>
-
-<!-- Security Notice -->
-<div class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-	<div class="flex items-start">
-		<svg
-			class="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400"
-			fill="currentColor"
-			viewBox="0 0 20 20"
-		>
-			<path
-				fill-rule="evenodd"
-				d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-				clip-rule="evenodd"
-			/>
-		</svg>
-		<div>
-			<h3 class="text-sm font-medium text-blue-900 dark:text-blue-100">
-				Important: Credential Security
-			</h3>
-			<p class="mt-1 text-sm text-blue-800 dark:text-blue-200">
-				Consumer keys and secrets are only displayed once at creation time for security reasons. 
-				Make sure to save them securely when creating a new consumer. If you lose your credentials, 
-				you'll need to <a href="/consumers/register" class="underline font-medium hover:text-blue-900 dark:hover:text-blue-100">create a new consumer</a>.
-			</p>
-		</div>
-	</div>
-</div>
 
 {#if consumers && consumers.length > 0}
 	<div class="space-y-4">
@@ -127,14 +98,6 @@
 									{consumer.secret}
 								</code>
 							</div>
-						{:else}
-							<div class="sm:col-span-2">
-								<div class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
-									<p class="text-sm text-yellow-800 dark:text-yellow-200">
-										<strong>Note:</strong> Consumer credentials (key and secret) are only shown once during creation for security reasons. If you've lost your credentials, you'll need to create a new consumer.
-									</p>
-								</div>
-							</div>
 						{/if}
 					</div>
 				</div>
@@ -154,7 +117,19 @@
 					<div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
 						<span class="font-medium text-gray-600 dark:text-gray-400">Redirect URL:</span>
 						<span class="sm:col-span-2 text-gray-900 dark:text-gray-100 break-all">
-							{consumer.redirect_url || 'Not specified'}
+							{#if consumer.redirect_url}
+								<a
+									href={consumer.redirect_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+									data-testid="consumer-redirect-url"
+								>
+									{consumer.redirect_url}
+								</a>
+							{:else}
+								Not specified
+							{/if}
 						</span>
 					</div>
 				</div>

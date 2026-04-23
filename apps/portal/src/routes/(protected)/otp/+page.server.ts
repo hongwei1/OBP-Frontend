@@ -28,7 +28,7 @@ export async function load(event: RequestEvent) {
 					};
 		}
 
-		return { flow, paymentService, paymentProduct, paymentId, userEntitlements };
+		return { flow, paymentService, paymentProduct, paymentId };
 	}
 
 	// transaction_request flow
@@ -65,12 +65,12 @@ export const actions = {
 		const flow = formData.get('flow') as string;
 
 		if (!otp) {
-			return { error: 'Please enter the OTP code.' };
+			return { message: 'Please enter the OTP code.' };
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return { error: 'No access token found in session.' };
+			return { message: 'No access token found in session.' };
 		}
 
 		try {
@@ -119,7 +119,7 @@ export const actions = {
 			if (e instanceof OBPRequestError) {
 				errorMessage = e.message;
 			}
-			return { error: errorMessage };
+			return { message: errorMessage };
 		}
 	}
 } satisfies Actions;

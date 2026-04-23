@@ -22,7 +22,7 @@
 		{#if form?.success}
 			<!-- Success Message -->
 			<div class="mx-auto w-full max-w-md space-y-4">
-				<div class="rounded-lg border border-success-500 bg-success-500/10 p-6 text-center">
+				<div class="rounded-lg border border-success-500 bg-success-500/10 p-6 text-center" data-testid="forgot-password-success">
 					<div class="flex justify-center mb-4">
 						<svg class="h-16 w-16 text-success-500" fill="currentColor" viewBox="0 0 20 20">
 							<path
@@ -59,9 +59,9 @@
 		{:else}
 			<!-- Request Form -->
 			<form class="mx-auto w-full max-w-md space-y-6" method="POST">
-				{#if form?.error}
+				{#if form?.message}
 					<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center">
-						<p class="text-error-500 font-semibold">{form.error}</p>
+						<p class="text-error-500 font-semibold">{form.message}</p>
 					</div>
 				{/if}
 
@@ -96,6 +96,7 @@
 					disabled={!canSubmit}
 					class="btn preset-filled-primary-500 w-full disabled:cursor-not-allowed disabled:opacity-50"
 					aria-label="Send Reset Link"
+					data-testid="submit-forgot-password"
 				>
 					{#if !canSubmit}
 						Enter Username and Email

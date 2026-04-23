@@ -94,7 +94,7 @@ class CurrentBankStore {
   private async _doFetch(): Promise<Bank[]> {
     try {
       this.loading = true;
-      const response = await trackedFetch("/api/banks");
+      const response = await trackedFetch("/proxy/obp/v6.0.0/banks");
 
       if (!response.ok) {
         throw new Error("Failed to fetch banks");

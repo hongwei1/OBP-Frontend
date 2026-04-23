@@ -17,7 +17,7 @@ export async function load(event: RequestEvent) {
 			};
 	}
 
-	return { consentId, userEntitlements };
+	return { consentId };
 }
 
 export const actions = {
@@ -27,18 +27,18 @@ export const actions = {
 		const consentId = formData.get('consentId') as string;
 
 		if (!otp) {
-			return { error: 'Please enter the OTP code.' };
+			return { message: 'Please enter the OTP code.' };
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return { error: 'No access token found in session.' };
+			return { message: 'No access token found in session.' };
 		}
 
 		const defaultBankId = env.DEFAULT_BANK_ID;
 		if (!defaultBankId) {
 			logger.error('DEFAULT_BANK_ID environment variable is not set');
-			return { error: 'Server configuration error: DEFAULT_BANK_ID is not set.' };
+			return { message: 'Server configuration error: DEFAULT_BANK_ID is not set.' };
 		}
 
 		try {
@@ -53,7 +53,7 @@ export const actions = {
 			}
 
 			return {
-				error: `Challenge was not accepted. Status: ${response.status}`
+				message: `Challenge was not accepted. Status: ${response.status}`
 			};
 		} catch (e) {
 			if (isRedirect(e)) throw e;
@@ -62,7 +62,7 @@ export const actions = {
 			if (e instanceof OBPRequestError) {
 				errorMessage = e.message;
 			}
-			return { error: errorMessage };
+			return { message: errorMessage };
 		}
 	}
 } satisfies Actions;

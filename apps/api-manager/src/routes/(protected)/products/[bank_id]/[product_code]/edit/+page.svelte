@@ -44,6 +44,7 @@
     monthlySubscriptionCurrency: string;
     rateLimits: { perSecond: string; perMinute: string; perHour: string; perDay: string; perWeek: string; perMonth: string };
     customAttributes: Array<{ name: string; type: string; value: string }>;
+    tags: string[];
   }) {
     if (!formData.collectionId) {
       toast.error("Validation Error", "API Collection is required");
@@ -53,7 +54,7 @@
     try {
       // Update the product with all core fields in the PUT body
       const productResponse = await trackedFetch(
-        `/api/products/${bankId}/${encodeURIComponent(productCode)}`,
+        `/proxy/obp/v6.0.0/banks/${bankId}/api-products/${encodeURIComponent(productCode)}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -73,13 +74,14 @@
             per_day_call_limit: Number(formData.rateLimits.perDay) || -1,
             per_week_call_limit: Number(formData.rateLimits.perWeek) || -1,
             per_month_call_limit: Number(formData.rateLimits.perMonth) || -1,
+            tags: formData.tags,
           }),
         },
       );
 
       if (!productResponse.ok) {
         const errorData = await productResponse.json();
-        throw new Error(errorData.error || "Failed to update product");
+        throw new Error(errorData.message);
       }
 
       // Create/update custom attributes only
@@ -88,7 +90,7 @@
       for (const attr of formData.customAttributes) {
         try {
           const attrResponse = await trackedFetch(
-            `/api/products/${bankId}/${encodeURIComponent(productCode)}/attribute`,
+            `/proxy/obp/v6.0.0/banks/${bankId}/api-products/${encodeURIComponent(productCode)}/attribute`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -191,6 +193,7 @@
             perMonth: product.per_month_call_limit || "",
           }}
           {initialCustomAttributes}
+          initialTags={product.tags || []}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
         />

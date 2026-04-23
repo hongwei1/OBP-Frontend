@@ -51,7 +51,7 @@
 			if (form.invitation.first_name && form.invitation.last_name) {
 				username = `${form.invitation.first_name.toLowerCase()}.${form.invitation.last_name.toLowerCase()}`;
 			}
-		} else if (form?.error) {
+		} else if (form?.message) {
 			// Stop loading state when error is received
 			isValidating = false;
 		}
@@ -90,7 +90,7 @@
 		</form>
 
 		<!-- Loading State -->
-		{#if isValidating && !invitationValidated && !form?.error}
+		{#if isValidating && !invitationValidated && !form?.message}
 			<div class="flex flex-col items-center justify-center py-12 space-y-4">
 				<div class="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-500"></div>
 				<p class="text-gray-400">Validating your invitation...</p>
@@ -98,13 +98,13 @@
 		{/if}
 
 		<!-- Error State -->
-		{#if form?.error && !invitationValidated && !isValidating}
+		{#if form?.message && !invitationValidated && !isValidating}
 			<div class="bg-error-500/10 border-error-500 rounded-lg border p-6 space-y-4">
 				<div class="flex items-start gap-3">
 					<AlertCircle class="h-6 w-6 text-error-500 flex-shrink-0 mt-1" />
 					<div class="flex-1">
 						<h3 class="font-semibold text-error-500 text-lg mb-2">Invitation Invalid</h3>
-						<p class="text-error-500">{form.error}</p>
+						<p class="text-error-500">{form.message}</p>
 						<p class="text-sm text-gray-400 mt-4">
 							If you believe this is an error, please contact your administrator or request a new
 							invitation.
@@ -351,9 +351,9 @@
 						</label>
 					</div>
 
-					{#if form?.error && invitationValidated}
+					{#if form?.message && invitationValidated}
 						<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center">
-							<p class="text-error-500 font-semibold">{form.error}</p>
+							<p class="text-error-500 font-semibold">{form.message}</p>
 						</div>
 					{/if}
 
@@ -387,7 +387,7 @@
 		{/if}
 
 		<!-- Help Text -->
-		{#if !invitationValidated && !form?.error && !isValidating}
+		{#if !invitationValidated && !form?.message && !isValidating}
 			<div class="text-center py-8">
 				<p class="text-gray-400">
 					If you're having trouble, please contact support or request a new invitation.

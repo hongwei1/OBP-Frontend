@@ -103,7 +103,7 @@
         {/if}
 
         {#if data.errorMessage}
-            <div class="mt-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50">
+            <div class="mt-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50" data-testid="login-error">
                 <div class="flex items-start justify-between gap-2">
                     <div class="flex items-start gap-3 flex-1 min-w-0">
                         <span class="text-red-400 text-xl flex-shrink-0">⚠</span>
@@ -178,7 +178,7 @@
             <div class="space-y-3 mt-4">
                 <p class="text-center text-sm text-gray-300">Choose your authentication provider:</p>
                 {#each data.availableProviders as provider}
-                    <button type="button" class="btn preset-filled-primary-500 mx-auto w-full">
+                    <button type="button" class="btn preset-filled-primary-500 mx-auto w-full" data-testid="provider-{provider.provider}">
                         <a href="/login/{provider.provider}" class="w-full flex items-center justify-between">
                             <span class="flex items-center gap-2">
                                 <span class="text-green-400">●</span>

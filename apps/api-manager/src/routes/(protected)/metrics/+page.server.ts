@@ -8,7 +8,7 @@ import { error } from "@sveltejs/kit";
 interface MetricRecord {
   date: string;
   duration: number;
-  user_name: string;
+  username: string;
   app_name: string;
   developer_email: string;
   consumer_id: string;
@@ -89,10 +89,10 @@ export const load: PageServerLoad = async ({ locals, url, depends }) => {
       params.app_name = url.searchParams.get("app_name")!;
     }
     if (
-      url.searchParams.has("user_name") &&
-      url.searchParams.get("user_name")?.trim()
+      url.searchParams.has("username") &&
+      url.searchParams.get("username")?.trim()
     ) {
-      params.user_name = url.searchParams.get("user_name")!;
+      params.username = url.searchParams.get("username")!;
     }
     if (url.searchParams.has("url") && url.searchParams.get("url")?.trim()) {
       params.url = url.searchParams.get("url")!;
@@ -140,6 +140,18 @@ export const load: PageServerLoad = async ({ locals, url, depends }) => {
     ) {
       params.duration = url.searchParams.get("duration")!;
     }
+    if (
+      url.searchParams.has("include_app_names") &&
+      url.searchParams.get("include_app_names")?.trim()
+    ) {
+      params.include_app_names = url.searchParams.get("include_app_names")!;
+    }
+    if (
+      url.searchParams.has("http_status_code") &&
+      url.searchParams.get("http_status_code")?.trim()
+    ) {
+      params.http_status_code = url.searchParams.get("http_status_code")!;
+    }
 
     // Fetch metrics with the constructed parameters
     logger.info("=== METRICS API CALL ===");
@@ -172,86 +184,30 @@ async function fetchMetrics(
   accessToken: string,
   params: Record<string, string>,
 ): Promise<MetricsResponse> {
-  try {
-    // Build query string
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value && String(value).trim() !== "") {
-        queryParams.append(key, String(value));
-      }
-    });
-
-    const endpoint = `/obp/v6.0.0/management/metrics?${queryParams.toString()}`;
-    logger.info(`METRICS API CALL START`);
-    logger.info(`  Endpoint: ${endpoint}`);
-    logger.info(`  Parameters: ${JSON.stringify(params, null, 2)}`);
-    logger.info(`  Query string: ${queryParams.toString()}`);
-    logger.info(
-      `  Access token: ${accessToken ? `${accessToken.substring(0, 20)}...` : "MISSING"}`,
-    );
-
-    const response = await obp_requests.get(endpoint, accessToken);
-
-    logger.info(`METRICS API RESPONSE`);
-    logger.info(`  Response type: ${typeof response}`);
-    logger.info(
-      `  Response keys: ${response ? Object.keys(response).join(", ") : "none"}`,
-    );
-    logger.info(
-      `  Has metrics property: ${response?.hasOwnProperty("metrics")}`,
-    );
-    logger.info(`  Metrics is array: ${Array.isArray(response?.metrics)}`);
-    logger.info(
-      `  LIMIT TEST: Requested ${params.limit}, got ${response?.metrics?.length || 0} records`,
-    );
-    if (response?.metrics) {
-      return {
-        metrics: response.metrics,
-        count: response.metrics.length,
-      };
-    } else {
-      logger.warn("NO METRICS DATA IN RESPONSE");
-      return {
-        metrics: [],
-        count: 0,
-        error: "No metrics data found in API response",
-      };
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value && String(value).trim() !== "") {
+      queryParams.append(key, String(value));
     }
-  } catch (err) {
-    logger.error("ERROR FETCHING METRICS:");
-    logger.error(`  Error type: ${err?.constructor?.name}`);
-    logger.error(
-      `  Error message: ${err instanceof Error ? err.message : String(err)}`,
-    );
-    logger.error(
-      `  Error stack: ${err instanceof Error ? err.stack : "No stack trace"}`,
-    );
+  });
 
+  const endpoint = `/obp/v6.0.0/management/metrics?${queryParams.toString()}`;
+  logger.info(`Fetching: ${endpoint}`);
+
+  const response = await obp_requests.getResponse(endpoint, accessToken);
+  const data = await response.json();
+
+  if (data?.metrics) {
     return {
-      metrics: [],
-      count: 0,
-      error: err instanceof Error ? err.message : "Failed to fetch metrics",
+      metrics: data.metrics,
+      count: data.metrics.length,
     };
   }
-}
 
-// Helper function to validate and format date
-function formatDateForAPI(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return date.toISOString();
-  } catch {
-    return new Date().toISOString();
-  }
-}
-
-// Helper function to get default date range (last hour)
-function getDefaultDateRange() {
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
+  // Return whatever OBP sent back as the error
   return {
-    from_date: oneHourAgo.toISOString(),
-    to_date: now.toISOString(),
+    metrics: [],
+    count: 0,
+    error: JSON.stringify(data),
   };
 }

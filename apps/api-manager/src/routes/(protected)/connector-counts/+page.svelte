@@ -66,7 +66,7 @@
     timestampColorIndex = (timestampColorIndex + 1) % 2;
 
     try {
-      const response = await trackedFetch(`/api/connector-counts`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/management/connector/metrics/counts`);
       const correlationId =
         response.headers.get("X-Correlation-Id") ||
         response.headers.get("x-correlation-id") ||
@@ -76,8 +76,8 @@
       const responseData = await response.json();
       rawResponse = responseData;
 
-      if (responseData.error) {
-        loadError = responseData.error;
+      if (responseData.message) {
+        loadError = responseData.message;
         counts = [];
         consecutiveErrors++;
         if (consecutiveErrors >= 1) {

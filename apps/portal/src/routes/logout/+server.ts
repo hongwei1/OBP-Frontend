@@ -2,8 +2,25 @@ import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('LogoutServer');
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import type { RequestEvent } from "@sveltejs/kit";
+import type { SessionOAuthStorageData } from "$lib/oauth/types";
 // Response is a global type, no need to import it
 
+/**
+ * Logout handler that supports both token revocation and Keycloak front-channel logout.
+ * 
+ * For Keycloak as IdP, this implements Option 2: Front-Channel Logout (Browser-based)
+ * Flow:
+ * 1. User clicks logout in the app
+ * 2. App redirects browser to Keycloak's end_session_endpoint
+ * 3. Keycloak ends the session and logs user out of all Keycloak-managed clients
+ * 4. Keycloak redirects back to post_logout_redirect_uri
+ * 
+ * Parameters sent to Keycloak logout endpoint:
+ * - id_token_hint: The ID token from the user's session (required for proper logout)
+ * - post_logout_redirect_uri: Where to redirect after logout (app origin)
+ * 
+ * For non-Keycloak providers, falls back to standard token revocation.
+ */
 export async function GET(event: RequestEvent): Promise<Response> {
     
     const session = event.locals.session;
@@ -28,8 +45,11 @@ export async function GET(event: RequestEvent): Promise<Response> {
         });
     }
 
-    // Get the access token before destroying session
-    const accessToken = session.data.oauth?.access_token;
+    // Get tokens and user info before destroying session
+    const oauthData = session.data.oauth as SessionOAuthStorageData;
+    const accessToken = oauthData?.access_token;
+    const idToken = oauthData?.id_token;
+    const provider = oauthData?.provider;
     const userId = session.data.user.user_id;
 
     // Clear the session cookie and destroy the session
@@ -38,7 +58,29 @@ export async function GET(event: RequestEvent): Promise<Response> {
     });
     await session.destroy();
 
-    // Try to revoke the access token if it exists and revocation endpoint is available
+    // Handle Keycloak front-channel logout
+    if (provider === 'keycloak' && idToken) {
+        const endSessionEndpoint = sessionOAuth.client.OIDCConfig?.end_session_endpoint;
+        if (endSessionEndpoint) {
+            logger.info("Performing Keycloak front-channel logout for user:", userId);
+            
+            const logoutUrl = new URL(endSessionEndpoint);
+            logoutUrl.searchParams.append('id_token_hint', idToken);
+            logoutUrl.searchParams.append('post_logout_redirect_uri', event.url.origin);
+
+            // Redirect to Keycloak logout endpoint for front-channel logout
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: logoutUrl.toString()
+                }
+            });
+        } else {
+            logger.warn("Keycloak end_session_endpoint not found, falling back to token revocation");
+        }
+    }
+
+    // Fallback: Try to revoke the access token if it exists and revocation endpoint is available
     const tokenRevokationUrl = sessionOAuth.client.OIDCConfig?.revocation_endpoint;
     if (accessToken && tokenRevokationUrl) {
         try {

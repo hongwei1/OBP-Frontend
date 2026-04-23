@@ -1,7 +1,7 @@
 {
 	"name": "obp-portal",
 	"private": true,
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -52,10 +52,14 @@
 		"vitest": "^3.0.0"
 	},
 	"dependencies": {
+		"@grpc/grpc-js": "^1.14.3",
+		"@grpc/proto-loader": "^0.8.0",
 		"@langchain/core": "^0.3.57",
 		"@lucide/svelte": "^0.513.0",
+		"@types/dompurify": "^3.0.5",
 		"arctic": "^3.7.0",
 		"bits-ui": "^2.8.10",
+		"dompurify": "^3.3.3",
 		"ioredis": "^5.6.1",
 		"jwt-decode": "^4.0.0",
 		"langchain": "^0.3.27",

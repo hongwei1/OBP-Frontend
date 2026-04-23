@@ -44,7 +44,7 @@
     error = null;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bId)}/accounts/${encodeURIComponent(aId)}/mandates`
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bId)}/accounts/${encodeURIComponent(aId)}/mandates`
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -63,10 +63,10 @@
     if (mandates.length > 0) {
       const activeCount = mandates.filter((m) => m.status === "ACTIVE").length;
       pageDataSummary.set(
-        `${mandates.length} mandate${mandates.length === 1 ? "" : "s"} for account ${accountId} at bank ${bankId}. ${activeCount} active.`
+        `${mandates.length} mandate${mandates.length === 1 ? "" : "s"} found. ${activeCount} active.`
       );
     } else if (!loading && !error) {
-      pageDataSummary.set(`No mandates found for account ${accountId} at bank ${bankId}.`);
+      pageDataSummary.set(`No mandates found.`);
     }
   });
 

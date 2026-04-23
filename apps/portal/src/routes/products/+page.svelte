@@ -40,9 +40,9 @@
 		</div>
 	{/if}
 
-	{#if data.error}
+	{#if data.message}
 		<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-center dark:border-red-800 dark:bg-red-900/20">
-			<p class="text-red-600 dark:text-red-400">{data.error}</p>
+			<p class="text-red-600 dark:text-red-400">{data.message}</p>
 		</div>
 	{:else if sortedProducts.length > 0}
 		<!-- Products Grid -->
@@ -107,10 +107,7 @@
 	{:else}
 		<div class="rounded-lg bg-gray-100 p-8 text-center dark:bg-gray-800">
 			<p class="text-gray-600 dark:text-gray-400">
-				No API products are available at this time.
-			</p>
-			<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">
-				Please check back later or contact support for more information.
+				No Products Defined.
 			</p>
 		</div>
 	{/if}

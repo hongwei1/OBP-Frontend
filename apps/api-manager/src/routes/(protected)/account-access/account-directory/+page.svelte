@@ -42,7 +42,7 @@
     error = null;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/account-directory?limit=200`,
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/account-directory?limit=200`,
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
-	import { myAccountItems } from '$lib/config/navigation';
+	import { myAccountItems, developerItems } from '$lib/config/navigation';
 	import Toast from '$lib/components/Toast.svelte';
 	import WelcomeBubble from '$lib/components/WelcomeBubble.svelte';
 	import { NavigationSidebar } from '@obp/shared/components';
+	import type { NavigationSection } from '@obp/shared/config';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	// Lucide Icons (used for building menuItems)
@@ -16,11 +17,29 @@
 		ShoppingBag,
 		Landmark,
 		DatabaseZap,
-		CreditCard
+		CreditCard,
+		MessageSquare,
+		Code
 	} from '@lucide/svelte';
 
+	const sections: NavigationSection[] = [
+		{
+			id: 'developers',
+			label: 'Developers',
+			iconComponent: Code,
+			items: developerItems,
+			basePaths: ['/developers']
+		}
+	];
+
 	import { env } from '$env/dynamic/public';
+	import { unreadCount } from '$lib/stores/unreadCount.svelte';
 	let { data, children } = $props();
+
+	// Initialize unread count store from server data
+	$effect(() => {
+		unreadCount.set(data.totalUnreadCount || 0);
+	});
 
 	// Undocumented feature flag - accepts string values (env vars are always strings in SvelteKit)
 	let hideFooterExtras = $state(
@@ -136,6 +155,7 @@
 	<NavigationSidebar
 		{menuItems}
 		{myAccountItems}
+		{sections}
 		{logoUrl}
 		{logoWidth}
 		{isAuthenticated}
@@ -160,6 +180,17 @@
 				style="height: 48px; flex-shrink: 0;"
 			>
 				{#if isAuthenticated}
+					<a href="/user/chat" class="relative mr-2" title="Chat" data-testid="chat-nav-icon">
+						<MessageSquare class="size-5 text-surface-300 hover:text-tertiary-400 transition-colors" />
+						{#if unreadCount.total > 0}
+							<span
+								class="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-primary-500 text-white text-[10px] font-bold min-w-[1rem] h-4 px-1"
+								data-testid="chat-unread-badge"
+							>
+								{unreadCount.total > 99 ? '99+' : unreadCount.total}
+							</span>
+						{/if}
+					</a>
 					<span class="mx-4 hover:text-tertiary-400"><a href="/user">{data.username}</a></span>
 					<button type="button" class="btn preset-outlined-primary-500"
 						><a href="/logout">Logout</a></button

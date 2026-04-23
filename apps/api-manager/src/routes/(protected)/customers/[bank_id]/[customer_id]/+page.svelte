@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { ArrowLeft, UserRound, Loader2, FileSignature, Plus } from "@lucide/svelte";
+  import { ArrowLeft, UserRound, Loader2, FileSignature, Plus, GitBranch, Link, Landmark } from "@lucide/svelte";
   import { trackedFetch } from "$lib/utils/trackedFetch";
   import MissingRoleAlert from "$lib/components/MissingRoleAlert.svelte";
 
@@ -46,7 +46,7 @@
     if (customer) {
       const kyc = customer.kyc_status ? "KYC complete" : "KYC incomplete";
       const attrs = customer.customer_attributes?.length || 0;
-      pageDataSummary.set(`Viewing customer ${customer.legal_name} at ${customer.bank_id}, ${kyc}, ${attrs} attributes`);
+      pageDataSummary.set(`Viewing customer ${customer.legal_name}, ${kyc}, ${attrs} attributes`);
       pageHeading.set(customer.legal_name);
     }
   });
@@ -74,7 +74,7 @@
     error = null;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/customers/${encodeURIComponent(customerId)}`
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/customers/${encodeURIComponent(customerId)}`
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -86,6 +86,32 @@
       customer = null;
     } finally {
       loading = false;
+    }
+  }
+
+  // Customer Account Links
+  let accountLinks = $state<any[]>([]);
+  let accountLinksLoading = $state(false);
+  let accountLinksError = $state<string | null>(null);
+
+  async function fetchAccountLinks(bankId: string, customerId: string) {
+    accountLinksLoading = true;
+    accountLinksError = null;
+    try {
+      const res = await trackedFetch(
+        `/backend/obp/banks/${encodeURIComponent(bankId)}/customers/${encodeURIComponent(customerId)}/customer-account-links`
+      );
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "Failed to fetch account links");
+      }
+      const d = await res.json();
+      accountLinks = d.links || [];
+    } catch (err) {
+      accountLinksError = err instanceof Error ? err.message : "Failed to fetch account links";
+      accountLinks = [];
+    } finally {
+      accountLinksLoading = false;
     }
   }
 
@@ -105,7 +131,7 @@
 
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/customers/${encodeURIComponent(customerId)}/attribute`,
+        `/proxy/obp/v4.0.0/banks/${encodeURIComponent(bankId)}/customers/${encodeURIComponent(customerId)}/attribute`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -143,6 +169,7 @@
   $effect(() => {
     if (bankId && customerId) {
       fetchCustomer(bankId, customerId);
+      fetchAccountLinks(bankId, customerId);
     }
   });
 </script>
@@ -175,6 +202,10 @@
           </h1>
           <div class="panel-subtitle">{bankId} / {customerId}</div>
         </div>
+        <a href="/customers/graph?bank_id={encodeURIComponent(bankId)}&customer_id={encodeURIComponent(customerId)}" class="btn-secondary" data-testid="view-graph">
+          <GitBranch size={16} />
+          Graph
+        </a>
         <a href="/mandates?customer_id={encodeURIComponent(customerId)}" class="btn-secondary" data-testid="view-mandates">
           <FileSignature size={16} />
           Mandates
@@ -446,6 +477,69 @@
             </div>
           {:else if !showAddAttribute}
             <p class="no-attributes">No customer attributes</p>
+          {/if}
+        </section>
+
+        <!-- Linked Accounts -->
+        <section class="detail-section">
+          <h2 class="section-title">
+            <Landmark size={16} />
+            Linked Accounts
+            {#if !accountLinksLoading && !accountLinksError}
+              ({accountLinks.length})
+            {/if}
+          </h2>
+          {#if accountLinksLoading}
+            <div class="loading-inline">
+              <Loader2 size={16} class="spinner-icon" />
+              <span>Loading linked accounts...</span>
+            </div>
+          {:else if accountLinksError}
+            <p class="no-attributes">{accountLinksError}</p>
+          {:else if accountLinks.length > 0}
+            <div class="table-container">
+              <table class="linked-accounts-table" data-testid="linked-accounts-table">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Relationship</th>
+                    <th>Routing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each accountLinks as al}
+                    <tr data-testid="linked-account-{al.account_id}">
+                      <td>
+                        <a
+                          href="/account-access/accounts/{encodeURIComponent(al.bank_id)}/{encodeURIComponent(al.account_id)}/owner"
+                          class="info-link"
+                          data-testid="linked-account-link"
+                        >
+                          {al.account_label || al.account_id}
+                        </a>
+                      </td>
+                      <td>
+                        <span class="badge">{al.relationship_type}</span>
+                      </td>
+                      <td>
+                        {#if al.account_routings && al.account_routings.length > 0}
+                          {#each al.account_routings as routing}
+                            <div class="routing-row">
+                              <span class="routing-scheme">{routing.scheme}</span>
+                              <span class="routing-address">{routing.address}</span>
+                            </div>
+                          {/each}
+                        {:else}
+                          —
+                        {/if}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {:else}
+            <p class="no-attributes">No linked accounts</p>
           {/if}
         </section>
       {/if}
@@ -1064,6 +1158,86 @@
 
   :global([data-mode="dark"]) .no-attributes {
     color: var(--color-surface-500);
+  }
+
+  /* Linked Accounts */
+  .loading-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.813rem;
+    color: #6b7280;
+    padding: 0.5rem 0;
+  }
+
+  :global([data-mode="dark"]) .loading-inline {
+    color: var(--color-surface-400);
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .linked-accounts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.813rem;
+  }
+
+  .linked-accounts-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+  }
+
+  :global([data-mode="dark"]) .linked-accounts-table th {
+    color: var(--color-surface-400);
+    border-bottom-color: rgb(var(--color-surface-600));
+  }
+
+  .linked-accounts-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    vertical-align: top;
+  }
+
+  :global([data-mode="dark"]) .linked-accounts-table td {
+    border-bottom-color: rgb(var(--color-surface-700));
+    color: var(--color-surface-200);
+  }
+
+  .linked-accounts-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  :global([data-mode="dark"]) .linked-accounts-table tbody tr:hover {
+    background: rgb(var(--color-surface-700));
+  }
+
+  .routing-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1.6;
+  }
+
+  .routing-scheme {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  :global([data-mode="dark"]) .routing-scheme {
+    color: var(--color-surface-400);
+  }
+
+  .routing-address {
+    font-family: monospace;
+    font-size: 0.75rem;
   }
 
   @media (max-width: 768px) {

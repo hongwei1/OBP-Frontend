@@ -33,7 +33,7 @@
         is_sharable: isSharable,
       };
 
-      const response = await trackedFetch("/api/api-collections", {
+      const response = await trackedFetch("/backend/api-collections", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -43,7 +43,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create collection");
+        throw new Error(errorData.message);
       }
 
       toast.success(

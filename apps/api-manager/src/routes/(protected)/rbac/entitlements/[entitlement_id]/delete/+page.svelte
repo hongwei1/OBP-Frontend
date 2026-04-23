@@ -44,7 +44,7 @@
 
     try {
       const response = await trackedFetch(
-        `/api/rbac/entitlements/${entitlement.entitlement_id}`,
+        `/backend/rbac/entitlements/${entitlement.entitlement_id}`,
         {
           method: "DELETE",
         },
@@ -52,7 +52,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete entitlement");
+        throw new Error(errorData.message);
       }
 
       toast.success(

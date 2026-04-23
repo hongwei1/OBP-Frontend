@@ -113,7 +113,7 @@
         bank_id: "", // System-wide roles use empty string
       };
 
-      const response = await trackedFetch("/api/rbac/entitlement-requests", {
+      const response = await trackedFetch("/backend/rbac/entitlement-requests", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +124,7 @@
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.error || "Failed to submit entitlement request",
+          errorData.message,
         );
       }
 
@@ -367,7 +367,7 @@
       );
 
       const response = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/data`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/data`,
         {
           method: "POST",
           headers: {
@@ -392,7 +392,7 @@
 
       // Refetch all records to ensure correct data structure
       const refetchResponse = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/data`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/data`,
         {
           credentials: "include",
         },
@@ -444,7 +444,7 @@
       const convertedData = convertFormDataToApiFormat(formData);
 
       const response = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/data/${recordId}`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/data/${recordId}`,
         {
           method: "PUT",
           headers: {
@@ -469,7 +469,7 @@
 
       // Refetch all records to ensure correct data structure
       const refetchResponse = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/data`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/data`,
         {
           credentials: "include",
         },
@@ -516,7 +516,7 @@
 
     try {
       const response = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/data/${recordId}`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/data/${recordId}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -535,7 +535,7 @@
 
       // Refetch all records to ensure correct data structure
       const refetchResponse = await fetch(
-        `/api/dynamic-entities/${entity.dynamic_entity_id}/data`,
+        `/backend/dynamic-entities/${entity.dynamic_entity_id}/data`,
         {
           credentials: "include",
         },

@@ -16,7 +16,7 @@ export const actions = {
         // Validate username
         if (!username || username.trim().length === 0) {
             return {
-                error: 'Please enter your username',
+                message: 'Please enter your username',
                 success: false
             };
         }
@@ -24,7 +24,7 @@ export const actions = {
         // Validate email format
         if (!email || !email.includes('@')) {
             return {
-                error: 'Please enter a valid email address',
+                message: 'Please enter a valid email address',
                 success: false
             };
         }

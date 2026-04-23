@@ -36,12 +36,12 @@ export const actions = {
 		const key = formData.get('key') as string;
 
 		if (!value) {
-			return { error: 'Please enter a value.' };
+			return { message: 'Please enter a value.' };
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return { error: 'No access token found in session.' };
+			return { message: 'No access token found in session.' };
 		}
 
 		try {
@@ -63,7 +63,7 @@ export const actions = {
 			if (e instanceof OBPRequestError) {
 				errorMessage = e.message;
 			}
-			return { error: errorMessage };
+			return { message: errorMessage };
 		}
 	}
 } satisfies Actions;

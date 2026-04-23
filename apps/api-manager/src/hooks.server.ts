@@ -1,4 +1,4 @@
-import { createLogger } from "@obp/shared/utils";
+import { createLogger } from '@obp/shared/utils';
 const logger = createLogger("HooksServer");
 import type { Handle } from "@sveltejs/kit";
 import { error } from "@sveltejs/kit";
@@ -11,8 +11,8 @@ import { PUBLIC_OBP_BASE_URL } from "$env/static/public";
 import { oauth2ProviderManager } from "$lib/oauth/providerManager";
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import { resourceDocsCache } from "$lib/stores/resourceDocsCache";
-import { healthCheckRegistry } from "@obp/shared/health-check";
-import { ensureOpeyNotebook } from "$lib/server/opey/opeyNotebook";
+import { healthCheckRegistry } from '@obp/shared/health-check';
+import { createOpeyNotebookDynamicEntityIfNeeded } from "$lib/server/opey/opeyNotebook";
 
 declare const process: { env: Record<string, string | undefined>; argv: string[] };
 
@@ -56,10 +56,6 @@ function checkServerPort() {
 }
 
 // Startup scripts
-if (!env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET environment variable is required but not set.");
-}
-
 // Check server port
 checkServerPort();
 
@@ -98,15 +94,19 @@ if (env.OPEY_BASE_URL) {
 healthCheckRegistry.startAll();
 
 // Bootstrap: ensure opey_notebook dynamic entity exists (using application access)
-ensureOpeyNotebook().then((ok) => {
-  if (!ok) {
-    logger.warn(
-      "opey_notebook entity could not be created at startup. " +
-        "Ensure the API Manager consumer has the CanCreateSystemLevelDynamicEntity scope " +
-        "and supports the client_credentials grant. Opey notebook features will not work without it."
-    );
-  }
-});
+if (env.PUBLIC_OPEY_NOTEBOOK_ENABLED === 'true') {
+  createOpeyNotebookDynamicEntityIfNeeded().then((ok: boolean) => {
+    if (!ok) {
+      logger.warn(
+        "opey_notebook entity could not be created at startup. " +
+          "Ensure the API Manager consumer has the CanCreateSystemLevelDynamicEntity scope " +
+          "and supports the client_credentials grant. Opey notebook features will not work without it."
+      );
+    }
+  });
+} else {
+  logger.info("Opey notebook is disabled (PUBLIC_OPEY_NOTEBOOK_ENABLED != 'true').");
+}
 
 function needsAuthorization(routeId: string): boolean {
   // protected routes are put in the /(protected)/ route group
@@ -199,9 +199,8 @@ const checkAuthorization: Handle = async ({ event, resolve }) => {
 // Init SvelteKitSessions
 export const handle: Handle = sequence(
   sveltekitSessionHandle({
-    secret: env.SESSION_SECRET,
+    secret: "secret",
     name: "obp-api-manager-ii-connect.sid",
-    cookie: { httpOnly: true, secure: true, sameSite: "lax" },
     store: new RedisStore({
       client,
       prefix: "obp-api-manager-ii-session:",

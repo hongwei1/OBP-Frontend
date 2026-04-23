@@ -42,7 +42,7 @@ export const actions = {
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return { error: 'No access token found in session.' };
+			return { message: 'No access token found in session.' };
 		}
 
 		// TODO: Call the OIDC provider's consent accept API with the challenge.

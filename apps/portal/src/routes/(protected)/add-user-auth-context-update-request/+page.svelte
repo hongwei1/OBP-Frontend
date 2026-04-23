@@ -16,9 +16,9 @@
 				process.
 			</p>
 
-			{#if form?.error}
+			{#if form?.message}
 				<div class="bg-error-500/10 border-error-500 mb-4 rounded-lg border p-4">
-					<p class="text-error-500 font-semibold">{form.error}</p>
+					<p class="text-error-500 font-semibold">{form.message}</p>
 				</div>
 			{/if}
 

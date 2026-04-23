@@ -28,7 +28,7 @@
       }
 
       const response = await fetch(
-        `/api/signal/channels/${encodeURIComponent(channelName.trim())}/messages`,
+        `/proxy/obp/v6.0.0/signal/channels/${encodeURIComponent(channelName.trim())}/messages`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -38,7 +38,7 @@
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed (${response.status})`);
+        throw new Error(errorData.message);
       }
 
       const result = await response.json();

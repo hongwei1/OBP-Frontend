@@ -35,6 +35,14 @@ import {
   Map,
   Radio,
   FileSignature,
+  Search,
+  ToggleLeft,
+  BookOpen,
+  AppWindow,
+  Link,
+  Zap,
+  ShieldOff,
+  MessageSquare,
 } from "@lucide/svelte";
 import { env } from "$env/dynamic/public";
 
@@ -119,6 +127,11 @@ function buildSystemItems(): NavigationItem[] {
       href: "/system/database-pool",
       label: "Database Pool",
       iconComponent: Waves,
+    },
+    {
+      href: "/system/features",
+      label: "Features",
+      iconComponent: ToggleLeft,
     },
     {
       href: "/system/featured-collections",
@@ -276,6 +289,16 @@ function buildRbacItems(): NavigationItem[] {
       iconComponent: Plus,
     },
     {
+      href: "/rbac/entitlements/bulk-grant",
+      label: "Bulk Grant",
+      iconComponent: Zap,
+    },
+    {
+      href: "/rbac/entitlements/bulk-revoke",
+      label: "Bulk Revoke",
+      iconComponent: ShieldOff,
+    },
+    {
       href: "/rbac/groups",
       label: "Groups",
       iconComponent: Users,
@@ -299,11 +322,6 @@ function buildRbacItems(): NavigationItem[] {
       href: "/rbac/entitlement-requests",
       label: "Entitlement Requests",
       iconComponent: FileCheck,
-    },
-    {
-      href: "/rbac/banks",
-      label: "Banks",
-      iconComponent: Building2,
     },
   ];
 
@@ -473,6 +491,28 @@ export function getActiveDynamicEndpointsMenuItem(pathname: string) {
   return found || dynamicEndpointsItems[0]; // fallback to first item
 }
 
+// Dynamic Resource Docs navigation items
+function buildDynamicResourceDocsItems(): NavigationItem[] {
+  return [
+    {
+      href: "/dynamic-resource-docs/system",
+      label: "System",
+      iconComponent: Plug,
+    },
+  ];
+}
+
+export const dynamicResourceDocsItems = buildDynamicResourceDocsItems();
+
+export function getActiveDynamicResourceDocsMenuItem(pathname: string) {
+  const found = dynamicResourceDocsItems.find((item) => {
+    if (item.external) return false;
+    return pathname.startsWith(item.href);
+  });
+
+  return found || dynamicResourceDocsItems[0];
+}
+
 // Products navigation items
 function buildProductsItems(): NavigationItem[] {
   const items: NavigationItem[] = [
@@ -490,6 +530,11 @@ function buildFinancialProductsItems(): NavigationItem[] {
     {
       href: "/products/financial",
       label: "Financial Products",
+      iconComponent: Banknote,
+    },
+    {
+      href: "/products/financial/all-banks",
+      label: "Financial Products at All Banks",
       iconComponent: Banknote,
     },
     {
@@ -518,6 +563,69 @@ export function getActiveProductsMenuItem(pathname: string) {
   });
 
   return found || productsItems[0];
+}
+
+// Users navigation items
+function buildUsersItems(): NavigationItem[] {
+  const items: NavigationItem[] = [
+    { href: "/users", label: "Search", iconComponent: Search },
+  ];
+
+  return items;
+}
+
+export const usersItems = buildUsersItems();
+
+export function getActiveUsersMenuItem(pathname: string) {
+  const found = usersItems.find((item) => {
+    if (item.external) {
+      return false;
+    }
+    return pathname.startsWith(item.href);
+  });
+
+  return found || usersItems[0];
+}
+
+// Management Docs navigation items
+function buildManagementDocsItems(): NavigationItem[] {
+  const items: NavigationItem[] = [
+    {
+      href: "/management-docs/consumers",
+      label: "Consumers",
+      iconComponent: AppWindow,
+    },
+    {
+      href: "/management-docs/users",
+      label: "Users",
+      iconComponent: Users,
+    },
+    {
+      href: "/management-docs/entitlements",
+      label: "Entitlements",
+      iconComponent: KeyRound,
+    },
+    {
+      href: "/management-docs/chat-rooms",
+      label: "Chat Rooms",
+      iconComponent: MessageSquare,
+    },
+  ];
+
+  return items;
+}
+
+export const managementDocsItems = buildManagementDocsItems();
+
+export function getActiveManagementDocsMenuItem(pathname: string) {
+  const found = managementDocsItems.find((item) => {
+    if (item.external) {
+      return false;
+    }
+    return pathname.startsWith(item.href);
+  });
+
+  return found || managementDocsItems[0];
 }
 
 // ABAC navigation items
@@ -565,6 +673,16 @@ function buildCustomersItems(): NavigationItem[] {
       label: "Corporate",
       iconComponent: Building,
     },
+    {
+      href: "/customers/account-links",
+      label: "Account Links",
+      iconComponent: Link,
+    },
+    {
+      href: "/customers/graph",
+      label: "Graph",
+      iconComponent: GitBranch,
+    },
   ];
 
   return items;
@@ -583,6 +701,37 @@ export function getActiveCustomersMenuItem(pathname: string) {
   return found || customersItems[0];
 }
 
+// Chat Rooms navigation items
+function buildChatRoomsItems(): NavigationItem[] {
+  const items: NavigationItem[] = [
+    {
+      href: "/chat-rooms/system",
+      label: "System",
+      iconComponent: Settings,
+    },
+    {
+      href: "/chat-rooms/bank",
+      label: "Bank",
+      iconComponent: Building2,
+    },
+  ];
+
+  return items;
+}
+
+export const chatRoomsItems = buildChatRoomsItems();
+
+export function getActiveChatRoomsMenuItem(pathname: string) {
+  const found = chatRoomsItems.find((item) => {
+    if (item.external) {
+      return false;
+    }
+    return pathname.startsWith(item.href);
+  });
+
+  return found || chatRoomsItems[0];
+}
+
 export const navSections: NavigationSection[] = [
   { id: "my-account", label: "My Profile", iconComponent: User, items: myAccountItems, basePaths: ["/user", "/account-access/accounts"] },
   { id: "system", label: "System", iconComponent: Server, items: systemItems, basePaths: ["/system"] },
@@ -594,8 +743,12 @@ export const navSections: NavigationSection[] = [
   { id: "financial-products", label: "Financial Products", iconComponent: Banknote, items: financialProductsItems, basePaths: ["/products/financial", "/products/collections"] },
   { id: "rbac", label: "RBAC", iconComponent: Shield, items: rbacItems, basePaths: ["/rbac"] },
   { id: "banks", label: "Banks", iconComponent: Building2, items: banksItems, basePaths: ["/banks"] },
+  { id: "users", label: "Users", iconComponent: Users, items: usersItems, basePaths: ["/users"] },
   { id: "customers", label: "Customers", iconComponent: Users, items: customersItems, basePaths: ["/customers"] },
   { id: "account-access", label: "Account Access", iconComponent: Landmark, items: accountAccessItems, basePaths: ["/account-access", "/mandates"] },
   { id: "dynamic-entities", label: "Dynamic Entities", iconComponent: Box, items: dynamicEntitiesItems, basePaths: ["/dynamic-entities"] },
   { id: "dynamic-endpoints", label: "Dynamic Endpoints", iconComponent: Plug, items: dynamicEndpointsItems, basePaths: ["/dynamic-endpoints"] },
+  { id: "dynamic-resource-docs", label: "Dynamic Resource Docs", iconComponent: FileText, items: dynamicResourceDocsItems, basePaths: ["/dynamic-resource-docs"] },
+  { id: "chat-rooms", label: "Chat Rooms", iconComponent: MessageSquare, items: chatRoomsItems, basePaths: ["/chat-rooms"] },
+  { id: "management-docs", label: "Management Docs", iconComponent: BookOpen, items: managementDocsItems, basePaths: ["/management-docs"] },
 ];

@@ -32,7 +32,7 @@
     loadError = "";
 
     try {
-      const response = await trackedFetch(`/api/products/${bankId}/${encodeURIComponent(productCode)}`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/banks/${bankId}/api-products/${encodeURIComponent(productCode)}`);
 
       if (!response.ok) {
         const errorDetails = await extractErrorFromResponse(
@@ -63,7 +63,7 @@
     isDeleting = true;
 
     try {
-      const response = await trackedFetch(`/api/products/${bankId}/${encodeURIComponent(productCode)}`, {
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/banks/${bankId}/api-products/${encodeURIComponent(productCode)}`, {
         method: "DELETE",
       });
 
@@ -177,6 +177,18 @@
               Parent Product: <a href="/products/{bankId}/{product.parent_api_product_code}" class="text-blue-600 hover:underline dark:text-blue-400">{product.parent_api_product_code}</a>
             </p>
           {/if}
+          {#if product.tags && product.tags.length > 0}
+            <div class="mt-3 flex flex-wrap gap-1.5" data-testid="api-product-tags">
+              {#each product.tags as tag}
+                <span
+                  class="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                  data-testid="api-product-tag-{tag}"
+                >
+                  {tag}
+                </span>
+              {/each}
+            </div>
+          {/if}
         </div>
         <div class="flex gap-2">
           <a
@@ -247,7 +259,7 @@
                   <code class="rounded bg-blue-50 px-2 py-0.5 text-sm dark:bg-blue-900/30">{product.collection_id}</code>
                 </a>
                 <a
-                  href="{apiExplorerUrl}/api-collections/{product.collection_id}"
+                  href="{apiExplorerUrl}/collections/{product.collection_id}"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center gap-1 rounded border border-purple-300 bg-purple-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-purple-700 dark:border-purple-600 dark:bg-purple-500 dark:hover:bg-purple-600"

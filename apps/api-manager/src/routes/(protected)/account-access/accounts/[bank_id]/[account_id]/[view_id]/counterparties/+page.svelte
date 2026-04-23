@@ -27,7 +27,7 @@
     error = null;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/${encodeURIComponent(viewId)}/counterparties`
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/${encodeURIComponent(viewId)}/counterparties`
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

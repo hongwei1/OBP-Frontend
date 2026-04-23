@@ -29,6 +29,7 @@
       perMonth: string;
     };
     customAttributes: CustomAttribute[];
+    tags: string[];
   }
 
   let {
@@ -46,6 +47,7 @@
     initialSubscriptionCurrency = "EUR",
     initialRateLimits = { perSecond: "", perMinute: "", perHour: "", perDay: "", perWeek: "", perMonth: "" },
     initialCustomAttributes = [],
+    initialTags = [],
     onSubmit,
     onCancel,
     submitLabel = mode === "create" ? "Create API Product" : "Save Changes",
@@ -65,6 +67,7 @@
     initialSubscriptionCurrency?: string;
     initialRateLimits?: { perSecond: string; perMinute: string; perHour: string; perDay: string; perWeek: string; perMonth: string };
     initialCustomAttributes?: CustomAttribute[];
+    initialTags?: string[];
     onSubmit: (data: ProductFormData) => Promise<void>;
     onCancel: () => void;
     submitLabel?: string;
@@ -94,6 +97,9 @@
 
   // Custom attributes (edit mode only)
   let customAttributes = $state<CustomAttribute[]>([...initialCustomAttributes]);
+
+  // Tags — bound as a comma-separated string in the UI, converted to/from string[] on the wire.
+  let tagsInput = $state(initialTags.join(", "));
 
   // Auto-generate product code from name (create mode only)
   let productCodeEdited = $state(false);
@@ -151,6 +157,10 @@
         customAttributes: customAttributes
           .filter((a) => a.name.trim() && a.value.trim())
           .map((a) => ({ name: a.name.trim(), type: a.type, value: a.value.trim() })),
+        tags: tagsInput
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0),
       });
     } finally {
       isSubmitting = false;
@@ -327,6 +337,26 @@
       <div class="form-help">
         Optional category for this product
       </div>
+    </div>
+  </div>
+
+  <!-- Tags -->
+  <div class="form-group">
+    <label for="product-tags" class="form-label">
+      Tags
+    </label>
+    <input
+      id="product-tags"
+      name="tags"
+      type="text"
+      class="form-input"
+      placeholder="e.g., featured, beta, new"
+      bind:value={tagsInput}
+      disabled={isSubmitting}
+      data-testid="product-tags"
+    />
+    <div class="form-help">
+      Comma-separated list. Add <code>featured</code> to surface this product in the portal.
     </div>
   </div>
 

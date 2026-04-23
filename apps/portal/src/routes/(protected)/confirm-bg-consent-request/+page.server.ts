@@ -159,13 +159,13 @@ export const actions = {
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return { error: 'No access token found in session.' };
+			return { message: 'No access token found in session.' };
 		}
 
 		const defaultBankId = env.DEFAULT_BANK_ID;
 		if (!defaultBankId) {
 			logger.error('DEFAULT_BANK_ID environment variable is not set');
-			return { error: 'Server configuration error: DEFAULT_BANK_ID is not set.' };
+			return { message: 'Server configuration error: DEFAULT_BANK_ID is not set.' };
 		}
 
 		try {
@@ -197,7 +197,7 @@ export const actions = {
 			if (e instanceof OBPRequestError) {
 				errorMessage = e.message;
 			}
-			return { error: errorMessage };
+			return { message: errorMessage };
 		}
 	},
 
@@ -208,13 +208,13 @@ export const actions = {
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return { error: 'No access token found in session.' };
+			return { message: 'No access token found in session.' };
 		}
 
 		const defaultBankId = env.DEFAULT_BANK_ID;
 		if (!defaultBankId) {
 			logger.error('DEFAULT_BANK_ID environment variable is not set');
-			return { error: 'Server configuration error: DEFAULT_BANK_ID is not set.' };
+			return { message: 'Server configuration error: DEFAULT_BANK_ID is not set.' };
 		}
 
 		try {
@@ -237,7 +237,7 @@ export const actions = {
 			if (e instanceof OBPRequestError) {
 				errorMessage = e.message;
 			}
-			return { error: errorMessage };
+			return { message: errorMessage };
 		}
 	}
 } satisfies Actions;

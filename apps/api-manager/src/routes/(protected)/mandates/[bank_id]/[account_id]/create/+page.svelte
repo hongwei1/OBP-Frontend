@@ -70,7 +70,7 @@
       }
 
       const response = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bank_id)}/accounts/${encodeURIComponent(account_id)}/mandates`,
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bank_id)}/accounts/${encodeURIComponent(account_id)}/mandates`,
         {
           method: "POST",
           headers: {
@@ -82,7 +82,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create mandate");
+        throw new Error(errorData.message);
       }
 
       const result = await response.json();

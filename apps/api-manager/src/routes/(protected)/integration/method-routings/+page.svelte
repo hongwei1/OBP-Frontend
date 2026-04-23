@@ -46,11 +46,11 @@
       error = null;
 
       const queryParams = viewMode === "active" ? "?active=true" : "";
-      const response = await fetch(`/api/integration/method-routings${queryParams}`);
+      const response = await fetch(`/backend/integration/method-routings${queryParams}`);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch method routings (${response.status}): ${errorMsg}`,
         );
@@ -77,11 +77,11 @@
     try {
       isLoadingMethodNames = true;
 
-      const response = await fetch("/api/devops/connector-method-names");
+      const response = await fetch("/proxy/obp/v6.0.0/system/connector-method-names");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch method names (${response.status}): ${errorMsg}`,
         );
@@ -103,11 +103,11 @@
     try {
       isLoadingConnectors = true;
 
-      const response = await fetch("/api/system/connectors");
+      const response = await fetch("/backend/system/connectors");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         console.error(`Failed to fetch connectors (${response.status}): ${errorMsg}`);
         return;
       }
@@ -126,7 +126,7 @@
 
   async function fetchBankIds() {
     try {
-      const response = await fetch("/api/banks");
+      const response = await fetch("/proxy/obp/v6.0.0/banks");
 
       if (!response.ok) {
         console.error(`Failed to fetch banks (${response.status})`);
@@ -152,7 +152,7 @@
       error = null;
       successMessage = null;
 
-      const response = await fetch("/api/integration/method-routings", {
+      const response = await fetch("/backend/integration/method-routings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,7 +162,7 @@
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create method routing");
+        throw new Error(errorData.message);
       }
 
       successMessage = "Method routing created successfully";
@@ -184,7 +184,7 @@
       error = null;
       successMessage = null;
 
-      const response = await fetch("/api/integration/method-routings", {
+      const response = await fetch("/backend/integration/method-routings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -194,7 +194,7 @@
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to update method routing");
+        throw new Error(errorData.message);
       }
 
       successMessage = "Method routing updated successfully";
@@ -1048,6 +1048,18 @@
     background: rgb(var(--color-success-900));
     color: rgb(var(--color-success-200));
     border-color: rgb(var(--color-success-800));
+  }
+
+  .alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  :global([data-mode="dark"]) .alert-info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.3);
   }
 
   .alert-close {

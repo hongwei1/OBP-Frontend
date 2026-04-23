@@ -10,9 +10,11 @@
     errorCode?: string;
     message?: string;
     bankId?: string;
+    /** When true, JIT will auto-grant this role on first use — show as informational, not blocking */
+    jitCovered?: boolean;
   }
 
-  let { roles, errorCode, message, bankId }: Props = $props();
+  let { roles, errorCode, message, bankId, jitCovered = false }: Props = $props();
 
   let isExpanded = $state(false);
   let isSubmitting = $state(false);
@@ -85,7 +87,7 @@
           bank_id: effectiveBankId || "",
         };
 
-        const response = await fetch("/api/rbac/entitlement-requests", {
+        const response = await fetch("/backend/rbac/entitlement-requests", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -96,7 +98,7 @@
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
-            errorData.error || "Failed to submit entitlement request",
+            errorData.message,
           );
         }
       }
@@ -110,15 +112,19 @@
   }
 </script>
 
-<div class="alert alert-missing-role" class:expanded={isExpanded}>
+<div class="alert" class:alert-missing-role={!jitCovered} class:alert-jit-covered={jitCovered} class:expanded={isExpanded}>
   <button
     type="button"
     class="alert-header"
     onclick={() => isExpanded = !isExpanded}
   >
-    <span class="alert-icon">🔒</span>
+    <span class="alert-icon">{jitCovered ? "⚡" : "🔒"}</span>
     <span class="alert-title">
-      <strong>Missing Entitlement{roles.length > 1 ? "s" : ""}:</strong>
+      {#if jitCovered}
+        <strong>JIT Entitlement{roles.length > 1 ? "s" : ""}:</strong>
+      {:else}
+        <strong>Missing Entitlement{roles.length > 1 ? "s" : ""}:</strong>
+      {/if}
       <span class="role-preview">{roles.join(", ")}</span>
     </span>
     {#if errorCode}
@@ -163,7 +169,11 @@
         <MessageBox message={submitError} type="error" />
       {/if}
 
-      {#if submitSuccess}
+      {#if jitCovered}
+        <div class="jit-info">
+          This entitlement will be <strong>automatically granted</strong> when you use this feature. No action needed.
+        </div>
+      {:else if submitSuccess}
         <div class="submit-success">
           Thanks, an Entitlement Request has been generated. Please ask your administrator to accept it using the <a href="/rbac/entitlement-requests" class="entitlement-requests-link">Entitlement Requests page</a>.
         </div>
@@ -185,10 +195,12 @@
         </div>
       {/if}
 
-      <div class="tip-box">
-        <strong>💡 Tip:</strong> If you have recently been granted this entitlement,
-        you should <strong>log out and log back in</strong> again.
-      </div>
+      {#if !jitCovered}
+        <div class="tip-box">
+          <strong>💡 Tip:</strong> If you have recently been granted this entitlement,
+          you should <strong>log out and log back in</strong> again.
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -214,6 +226,23 @@
     background: rgb(var(--color-warning-900));
     border-color: rgb(var(--color-warning-600));
     color: rgb(var(--color-warning-200));
+  }
+
+  .alert-jit-covered {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    color: #166534;
+    padding: 0.75rem 1rem;
+  }
+
+  .alert-jit-covered.expanded {
+    padding: 1rem 1.25rem;
+  }
+
+  :global([data-mode="dark"]) .alert-jit-covered {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #4ade80;
   }
 
   .alert-header {
@@ -316,6 +345,14 @@
     color: rgb(var(--color-warning-100));
   }
 
+  .alert-jit-covered .entitlement-name {
+    color: #166534;
+  }
+
+  :global([data-mode="dark"]) .alert-jit-covered .entitlement-name {
+    color: #4ade80;
+  }
+
   .bank-code {
     background: rgba(0, 0, 0, 0.1);
     padding: 0.125rem 0.5rem;
@@ -392,6 +429,23 @@
     to {
       transform: rotate(360deg);
     }
+  }
+
+  .jit-info {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 4px;
+    color: #166534;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  :global([data-mode="dark"]) .jit-info {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #4ade80;
   }
 
   .submit-success {

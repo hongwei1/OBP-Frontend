@@ -107,7 +107,7 @@
           .filter((v) => v);
       }
 
-      const response = await fetch("/api/system-views", {
+      const response = await fetch("/backend/system-views", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

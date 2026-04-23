@@ -32,7 +32,7 @@
     formError = "";
 
     try {
-      const response = await fetch("/api/webui-props", {
+      const response = await fetch("/backend/webui-props", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
