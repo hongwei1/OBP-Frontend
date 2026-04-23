@@ -54,10 +54,14 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "@langchain/core": "^0.3.57",
     "@lucide/svelte": "^0.513.0",
+    "@types/d3": "^7.4.3",
     "arctic": "^3.7.0",
     "bits-ui": "^2.8.10",
+    "d3": "^7.9.0",
     "ioredis": "^5.6.1",
     "jwt-decode": "^4.0.0",
     "langchain": "^0.3.27",

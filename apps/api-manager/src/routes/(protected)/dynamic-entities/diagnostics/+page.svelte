@@ -56,7 +56,7 @@
     bankLoading = true;
     bankError = null;
     try {
-      const response = await trackedFetch(`/api/dynamic-entities/bank/${bankId}/list`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/management/banks/${bankId}/dynamic-entities`);
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error || "Failed to fetch bank-level dynamic entities");
@@ -107,7 +107,7 @@
     cleanupResult = null;
 
     try {
-      const response = await fetch("/api/dynamic-entities/diagnostics/cleanup", {
+      const response = await fetch("/proxy/obp/v6.0.0/management/diagnostics/dynamic-entities/orphaned-records", {
         method: "DELETE",
       });
 

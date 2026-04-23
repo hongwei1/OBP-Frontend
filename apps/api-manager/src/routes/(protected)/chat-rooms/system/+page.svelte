@@ -1,0 +1,234 @@
+<script lang="ts">
+  import { enhance } from "$app/forms";
+  import type { OBPChatRoom } from "$lib/obp/types";
+
+  let { data, form } = $props();
+  let chatRooms: OBPChatRoom[] = $state(data.chatRooms || []);
+  let errorMessage = $state(data.error || form?.error || "");
+  let successMessage = $state("");
+
+  let searchQuery = $state("");
+  let showCreateForm = $state(false);
+
+  $effect(() => {
+    if (form?.success && form?.action === "create") {
+      successMessage = "Chat room created successfully.";
+      showCreateForm = false;
+    } else if (form?.success && form?.action === "delete") {
+      successMessage = "Chat room deleted.";
+    }
+    if (form?.error) {
+      errorMessage = form.error;
+    }
+  });
+
+  function formatDate(dateString: string): string {
+    try {
+      return new Date(dateString).toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Unknown";
+    }
+  }
+
+  let filteredChatRooms = $derived(
+    !chatRooms || !searchQuery.trim()
+      ? chatRooms
+      : chatRooms.filter((room: OBPChatRoom) => {
+          const query = searchQuery.toLowerCase();
+          return (
+            room.name?.toLowerCase().includes(query) ||
+            room.description?.toLowerCase().includes(query) ||
+            room.chat_room_id?.toLowerCase().includes(query) ||
+            room.created_by?.toLowerCase().includes(query)
+          );
+        }),
+  );
+</script>
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+    System Chat Rooms
+  </h1>
+  <div class="flex items-center gap-3">
+    {#if chatRooms.length > 0}
+      <span class="text-sm text-gray-600 dark:text-gray-400">
+        Total: {chatRooms.length}
+      </span>
+    {/if}
+    <button
+      onclick={() => (showCreateForm = !showCreateForm)}
+      class="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+      data-testid="create-chat-room-btn"
+    >
+      {showCreateForm ? "Cancel" : "Create Chat Room"}
+    </button>
+  </div>
+</div>
+
+{#if successMessage}
+  <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200" data-testid="success-message">
+    {successMessage}
+  </div>
+{/if}
+
+{#if errorMessage}
+  <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200" data-testid="error-message">
+    {errorMessage}
+  </div>
+{/if}
+
+{#if showCreateForm}
+  <div class="mb-4 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800" data-testid="create-chat-room-form">
+    <h2 class="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">Create System Chat Room</h2>
+    <form method="POST" action="?/create" use:enhance>
+      <div class="space-y-3">
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            data-testid="chat-room-name-input"
+          />
+        </div>
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            rows="2"
+            class="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            data-testid="chat-room-description-input"
+          ></textarea>
+        </div>
+        <button
+          type="submit"
+          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+          data-testid="submit-create-chat-room"
+        >
+          Create
+        </button>
+      </div>
+    </form>
+  </div>
+{/if}
+
+{#if chatRooms.length > 0}
+  <div class="mb-3">
+    <input
+      type="text"
+      bind:value={searchQuery}
+      placeholder="Search chat rooms by name, description, or ID..."
+      name="search"
+      class="block w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-3 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
+      data-testid="search-chat-rooms"
+    />
+    {#if searchQuery}
+      <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+        Showing {filteredChatRooms.length} of {chatRooms.length} chat rooms
+      </p>
+    {/if}
+  </div>
+{/if}
+
+{#if filteredChatRooms.length > 0}
+  <div class="space-y-2">
+    {#each filteredChatRooms as room (room.chat_room_id)}
+      <div
+        class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+        data-testid="chat-room-card-{room.chat_room_id}"
+      >
+        <div class="mb-2 flex items-start justify-between">
+          <div class="flex-1 min-w-0">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+              {room.name}
+            </h2>
+            {#if room.description}
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{room.description}</p>
+            {/if}
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            <a
+              href="/chat-rooms/{room.chat_room_id}?level=system"
+              class="inline-flex items-center rounded border border-blue-300 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+              data-testid="view-chat-room-{room.chat_room_id}"
+            >
+              Details
+            </a>
+            <a
+              href="/chat-rooms/{room.chat_room_id}/edit?level=system"
+              class="inline-flex items-center rounded border border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              data-testid="edit-chat-room-{room.chat_room_id}"
+            >
+              Edit
+            </a>
+            <form method="POST" action="?/delete" use:enhance class="inline">
+              <input type="hidden" name="chat_room_id" value={room.chat_room_id} />
+              <button
+                type="submit"
+                class="inline-flex items-center rounded border border-red-300 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:border-red-600 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                data-testid="delete-chat-room-{room.chat_room_id}"
+              >
+                Delete
+              </button>
+            </form>
+            <span
+              class="rounded-full px-2 py-0.5 text-xs font-medium {room.is_archived
+                ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'}"
+            >
+              {room.is_archived ? "Archived" : "Active"}
+            </span>
+          </div>
+        </div>
+
+        <div class="mt-2 space-y-1 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
+            <span class="font-medium text-gray-600 dark:text-gray-400">Chat Room ID:</span>
+            <span class="sm:col-span-2 text-gray-900 dark:text-gray-100 font-mono">{room.chat_room_id}</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
+            <span class="font-medium text-gray-600 dark:text-gray-400">Created by:</span>
+            <span class="sm:col-span-2 text-gray-900 dark:text-gray-100">
+              {room.created_by_username || room.created_by}
+              {#if room.created_by_provider}
+                <span class="text-gray-500 dark:text-gray-500">({room.created_by_provider})</span>
+              {/if}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
+            <span class="font-medium text-gray-600 dark:text-gray-400">Created:</span>
+            <span class="sm:col-span-2 text-gray-900 dark:text-gray-100">{formatDate(room.created_at)}</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
+            <span class="font-medium text-gray-600 dark:text-gray-400">Open room:</span>
+            <span class="sm:col-span-2 text-gray-900 dark:text-gray-100">{room.is_open_room ? "Yes" : "No"}</span>
+          </div>
+          {#if room.joining_key}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-1">
+              <span class="font-medium text-gray-600 dark:text-gray-400">Joining Key:</span>
+              <span class="sm:col-span-2 text-gray-900 dark:text-gray-100 font-mono">{room.joining_key}</span>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/each}
+  </div>
+{:else if !errorMessage}
+  <div class="rounded-lg bg-gray-100 p-8 text-center dark:bg-gray-800">
+    <p class="text-lg font-medium text-gray-700 dark:text-gray-300">
+      No system chat rooms found
+    </p>
+    <p class="mt-1 text-gray-600 dark:text-gray-400">
+      Create a chat room to get started.
+    </p>
+  </div>
+{/if}

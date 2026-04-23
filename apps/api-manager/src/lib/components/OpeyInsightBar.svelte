@@ -1,48 +1,56 @@
 <script lang="ts">
-  import { X, MessageCircle, Loader2 } from "@lucide/svelte";
+  import { MessageCircle, Loader2, ChevronDown, ChevronRight } from "@lucide/svelte";
   import { onMount } from "svelte";
   import { insightService } from "$lib/services/InsightService";
   import { pageDataSummary } from "$lib/stores/pageDataSummary.svelte";
   import { pageHeading } from "$lib/stores/pageHeading.svelte";
+  import { userPreferences } from "$lib/stores/userPreferences.svelte";
 
-  let { pathname, pageContext }: { pathname: string; pageContext: string } = $props();
+  let { pathname, pageContext, opey_insights_is_open = $bindable(false) }: { pathname: string; pageContext: string; opey_insights_is_open: boolean } = $props();
 
-  let dismissed = $state(false);
   let insightText = $state("");
-  let loading = $state(true);
+  let loading = $state(false);
+  let hasFetched = $state(false);
 
   onMount(() => {
-    // Clear any stale data from the previous page
     pageDataSummary.clear();
     pageHeading.clear();
-    // Wait a moment for the page to load its data and call pageDataSummary.set() / pageHeading.set()
-    const timer = setTimeout(() => fetchInsight(), 1500);
-    return () => clearTimeout(timer);
+  });
+
+  $effect(() => {
+    if (opey_insights_is_open && !hasFetched) {
+      hasFetched = true;
+      setTimeout(() => fetchInsight(), 1500);
+    }
   });
 
   let displayLabel = $derived(
     pageHeading.value ? `${pageContext}: ${pageHeading.value}` : pageContext
   );
 
+  let editedPrompt = $state("");
+  let isEditing = $state(false);
+
   let askPrompt = $derived(
-    pageHeading.value
+    editedPrompt || (pageHeading.value
       ? `Tell me about the ${pageContext} ${pageHeading.value}`
-      : insightText
+      : insightText)
   );
+
+  function startEditing() {
+    editedPrompt = askPrompt;
+    isEditing = true;
+  }
 
   async function fetchInsight() {
     loading = true;
 
     try {
-      // Only write to notebook on detail pages (when pageDataSummary has content)
       if (pageDataSummary.value) {
         await insightService.writeNote(`${pageContext} — ${pageDataSummary.value}`);
       }
 
-      // Fetch last 10 notebook entries
-      const recentNotes = await insightService.getRecentNotes(10);
-
-      // Ask Opey for a short insight based on notebook + current page
+      const recentNotes = await insightService.getRecentNotes(5);
       const insight = await insightService.getInsight(pageContext, recentNotes);
 
       insightText = insight || displayLabel;
@@ -54,24 +62,50 @@
   }
 </script>
 
-{#if !dismissed && (loading || insightText)}
+{#if opey_insights_is_open}
   <div
     data-testid="opey-insight-bar"
     data-state={loading ? "loading" : "ready"}
     class="flex items-center gap-3 border-b border-surface-200-800 bg-surface-50-950 px-4 py-2 text-sm"
   >
+    <button
+      type="button"
+      data-testid="opey-insight-toggle"
+      class="hover:text-tertiary-400"
+      onclick={() => userPreferences.setOpeyInsightsOpen(false)}
+      aria-label="Hide insights"
+    >
+      <ChevronDown class="size-4" />
+    </button>
+
     {#if loading}
       <Loader2 class="size-4 shrink-0 animate-spin text-tertiary-500" />
       <span class="flex-1 text-surface-500">Opey is thinking...</span>
     {:else}
       <MessageCircle class="size-4 shrink-0 text-tertiary-500" />
-      <span class="flex-1">
-        {#if pageHeading.value}
-          <strong>{displayLabel}</strong> — {insightText}
-        {:else}
-          {insightText}
-        {/if}
-      </span>
+      {#if isEditing}
+        <input
+          type="text"
+          class="flex-1 rounded border border-surface-300-700 bg-surface-50-950 px-2 py-1 text-sm focus:border-tertiary-500 focus:outline-none"
+          bind:value={editedPrompt}
+          data-testid="opey-insight-edit-input"
+          onkeydown={(e) => { if (e.key === "Escape") isEditing = false; }}
+        />
+      {:else}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span
+          class="flex-1 cursor-text rounded px-1 hover:bg-surface-100-900"
+          onclick={startEditing}
+          data-testid="opey-insight-text"
+        >
+          {#if pageHeading.value}
+            <strong>{displayLabel}</strong> — {insightText}
+          {:else}
+            {insightText}
+          {/if}
+        </span>
+      {/if}
       <a
         href="/?ask={encodeURIComponent(askPrompt)}"
         data-testid="opey-insight-ask-button"
@@ -80,14 +114,5 @@
         Ask Opey
       </a>
     {/if}
-    <button
-      type="button"
-      data-testid="opey-insight-dismiss"
-      class="hover:text-tertiary-400"
-      onclick={() => (dismissed = true)}
-      aria-label="Dismiss insight bar"
-    >
-      <X class="size-4" />
-    </button>
   </div>
 {/if}

@@ -7,7 +7,11 @@ const routeDescriptions: Array<{ pattern: RegExp; description: string }> = [
   { pattern: /^\/banks\/create$/, description: "Create Bank" },
   { pattern: /^\/banks\/(?!create$)[^/]+/, description: "Bank" },
   { pattern: /^\/banks$/, description: "Banks list" },
+  { pattern: /^\/users\/[^/]+/, description: "User" },
   { pattern: /^\/users$/, description: "Users list" },
+  { pattern: /^\/customers\/graph/, description: "Customer Graph" },
+  { pattern: /^\/customers\/account-links/, description: "Customer Account Links" },
+  { pattern: /^\/consumers\/[^/]+/, description: "API Consumer" },
   { pattern: /^\/consumers$/, description: "API Consumers list" },
   { pattern: /^\/aggregate-metrics/, description: "Aggregate Metrics" },
   { pattern: /^\/connector-metrics/, description: "Connector Metrics" },
@@ -60,5 +64,5 @@ const routeDescriptions: Array<{ pattern: RegExp; description: string }> = [
  */
 export function describeRoute(pathname: string): string {
   const match = routeDescriptions.find((r) => r.pattern.test(pathname));
-  return match ? match.description : pathname;
+  return match ? match.description : "Page";
 }

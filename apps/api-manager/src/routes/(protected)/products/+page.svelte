@@ -35,7 +35,7 @@
     loadError = "";
 
     try {
-      const response = await trackedFetch(`/api/products/${bankId}`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/banks/${bankId}/api-products`);
 
       if (!response.ok) {
         const errorDetails = await extractErrorFromResponse(
@@ -49,7 +49,7 @@
       }
 
       const data = await response.json();
-      products = data.products || [];
+      products = data.api_products || [];
     } catch (err) {
       console.error("Error loading products:", err);
       loadError = err instanceof Error ? err.message : "Failed to load products";
@@ -338,6 +338,18 @@
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Parent: <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">{product.parent_api_product_code}</code>
                   </p>
+                {/if}
+                {#if product.tags && product.tags.length > 0}
+                  <div class="mt-2 flex flex-wrap gap-1" data-testid="api-product-tags">
+                    {#each product.tags as tag}
+                      <span
+                        class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                        data-testid="api-product-tag-{tag}"
+                      >
+                        {tag}
+                      </span>
+                    {/each}
+                  </div>
                 {/if}
               </div>
               <div class="flex items-center gap-2">

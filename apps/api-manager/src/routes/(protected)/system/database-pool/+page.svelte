@@ -28,11 +28,11 @@
       isLoading = true;
       error = null;
 
-      const response = await fetch("/api/system/database-pool");
+      const response = await fetch("/proxy/obp/v6.0.0/system/database/pool");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch database pool info (${response.status}): ${errorMsg}`,
         );
@@ -40,8 +40,8 @@
 
       const responseData = await response.json();
 
-      if (responseData.error) {
-        throw new Error(responseData.error);
+      if (responseData.message) {
+        throw new Error(responseData.message);
       }
 
       poolInfo = responseData;

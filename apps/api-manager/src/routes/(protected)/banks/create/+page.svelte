@@ -38,7 +38,7 @@
 
     try {
       const requestBody: Record<string, any> = {
-        id: bankId.trim(),
+        bank_id: bankId.trim(),
         full_name: fullName.trim(),
         bank_code: bankCode.trim(),
         logo: logo.trim(),
@@ -48,7 +48,7 @@
           .map((r) => ({ scheme: r.scheme.trim(), address: r.address.trim() })),
       };
 
-      const response = await trackedFetch("/api/banks", {
+      const response = await trackedFetch("/proxy/obp/v6.0.0/banks", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -56,17 +56,36 @@
         body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create bank");
+      const bodyText = await response.text();
+      let body: any = null;
+      try {
+        body = bodyText ? JSON.parse(bodyText) : null;
+      } catch {
+        throw new Error(
+          `Unexpected non-JSON response from OBP (HTTP ${response.status}): ${bodyText}`,
+        );
       }
 
-      const created = await response.json();
+      if (!response.ok) {
+        if (!body || typeof body.message !== "string") {
+          throw new Error(
+            `Unexpected error format from OBP (HTTP ${response.status}): ${bodyText}`,
+          );
+        }
+        const code = body.code != null ? String(body.code) : "";
+        throw new Error(code ? `${code}: ${body.message}` : body.message);
+      }
 
-      toast.success("Bank Created", `Successfully created bank ${created.bank_id || bankId}`);
+      if (!body || typeof body.bank_id !== "string" || !body.bank_id) {
+        throw new Error(
+          `Unexpected success response from OBP (HTTP ${response.status}): ${bodyText}`,
+        );
+      }
+
+      toast.success("Bank Created", `Successfully created bank ${body.bank_id}`);
 
       setTimeout(() => {
-        goto(`/banks/${created.bank_id || bankId}`);
+        goto(`/banks/${body.bank_id}`);
       }, 1000);
     } catch (err) {
       const errorMessage =

@@ -81,7 +81,7 @@
     searchLabel = `account ${accountId}`;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/mandates`
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/mandates`
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -106,7 +106,7 @@
     try {
       // First get accounts for this customer
       const accountsRes = await trackedFetch(
-        `/api/obp/customers/${encodeURIComponent(customerId)}/accounts-minimal`
+        `/proxy/obp/v4.0.0/customers/${encodeURIComponent(customerId)}/accounts-minimal`
       );
       if (!accountsRes.ok) {
         const data = await accountsRes.json().catch(() => ({}));
@@ -126,7 +126,7 @@
       const settled = await Promise.allSettled(
         accounts.map(async (acct) => {
           const res = await trackedFetch(
-            `/api/obp/banks/${encodeURIComponent(acct.bank_id)}/accounts/${encodeURIComponent(acct.account_id)}/mandates`
+            `/proxy/obp/v6.0.0/banks/${encodeURIComponent(acct.bank_id)}/accounts/${encodeURIComponent(acct.account_id)}/mandates`
           );
           if (!res.ok) return [];
           const data = await res.json();

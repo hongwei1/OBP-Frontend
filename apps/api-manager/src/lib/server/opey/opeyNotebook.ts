@@ -95,7 +95,7 @@ async function getApplicationAccessToken(): Promise<string | null> {
  *
  * Requires the API Manager consumer to have the CanCreateSystemLevelDynamicEntity scope.
  */
-export async function ensureOpeyNotebook(): Promise<boolean> {
+export async function createOpeyNotebookDynamicEntityIfNeeded(): Promise<boolean> {
 	const entityName = OPEY_NOTEBOOK.entity_name;
 
 	const accessToken = await getApplicationAccessToken();

@@ -84,7 +84,7 @@
 
       requestBody.policy = formPolicy;
 
-      const response = await fetch("/api/abac-rules", {
+      const response = await fetch("/backend/abac-rules", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -65,7 +65,7 @@
     bankEntitiesLoading = true;
     bankEntitiesError = null;
     try {
-      const response = await trackedFetch(`/api/dynamic-entities/bank/${bankId}/list`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/management/banks/${bankId}/dynamic-entities`);
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error || "Failed to fetch bank-level dynamic entities");
@@ -136,8 +136,8 @@
 
     try {
       const url = cascade
-        ? `/api/dynamic-entities/${entityId}?cascade=true`
-        : `/api/dynamic-entities/${entityId}`;
+        ? `/backend/dynamic-entities/${entityId}?cascade=true`
+        : `/backend/dynamic-entities/${entityId}`;
 
       const response = await fetch(url, {
         method: "DELETE",
@@ -173,14 +173,14 @@
     backingUp[entityId] = true;
 
     try {
-      const response = await fetch(`/api/dynamic-entities/${entityId}/backup`, {
+      const response = await fetch(`/backend/dynamic-entities/${entityId}/backup`, {
         method: "POST",
       });
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(responseData.error || "Failed to backup entity");
+        throw new Error(responseData.message);
       }
 
       alert(`Backup created: ${responseData.entity_name}`);

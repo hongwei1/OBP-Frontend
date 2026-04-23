@@ -17,11 +17,11 @@
       isLoading = true;
       error = null;
 
-      const response = await fetch("/api/devops/migrations");
+      const response = await fetch("/proxy/obp/v6.0.0/system/migrations");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch migrations (${response.status}): ${errorMsg}`,
         );
@@ -35,8 +35,8 @@
       console.log("Data keys:", data ? Object.keys(data) : "null");
       console.log("Full data:", data);
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (data.message) {
+        throw new Error(data.message);
       }
 
       // Handle both array response and object with migrations/entries property
@@ -60,7 +60,7 @@
       error = err instanceof Error ? err.message : "Failed to fetch migrations";
       console.error("Error fetching migrations:", err);
       console.error("Full error details:", {
-        url: "/api/devops/migrations",
+        url: "/proxy/obp/v6.0.0/system/migrations",
         timestamp: new Date().toISOString(),
       });
     } finally {
@@ -259,24 +259,16 @@
         {:else if migrations.length > 0}
           <div class="migrations-container">
             <div class="table-wrapper">
-              <table class="migrations-table">
+<table class="migrations-table">
                 <thead>
                   <tr>
-                    <th>Migration ID</th>
                     <th>Name</th>
                     <th>Status</th>
-                    <th>Timestamp</th>
-                    <th>Description</th>
                   </tr>
                 </thead>
                 <tbody>
                   {#each migrations as migration}
-                    <tr>
-                      <td class="id-cell">
-                        {migration.migration_script_log_id ||
-                          migration.id ||
-                          "N/A"}
-                      </td>
+                    <tr class="migration-main-row">
                       <td class="name-cell">
                         {migration.name || "N/A"}
                       </td>
@@ -289,12 +281,18 @@
                           {migration.is_successful ? "SUCCESS" : "FAILED"}
                         </span>
                       </td>
-                      <td class="timestamp-cell">
-                        {formatTimestamp(
-                          migration.created_at || migration.start_date,
-                        )}
+                    </tr>
+                    <tr class="migration-meta-row">
+                      <td colspan="2">
+                        <div class="meta-cell">
+                          <span class="id-cell">{migration.migration_script_log_id || migration.id || "N/A"}</span>
+                          <span class="timestamp-cell">{formatTimestamp(migration.created_at || migration.start_date)}</span>
+                        </div>
                       </td>
-                      <td class="description-cell">
+                    </tr>
+                    <tr class="migration-desc-row">
+                      <td colspan="2" class="description-cell">
+                        <span class="description-label">Description:</span>
                         {migration.remark || migration.description || "N/A"}
                       </td>
                     </tr>
@@ -469,6 +467,7 @@
 
   .table-wrapper {
     overflow-x: auto;
+    max-width: 100%;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
   }
@@ -492,6 +491,7 @@
     border-bottom: 2px solid #e5e7eb;
   }
 
+
   :global([data-mode="dark"]) .migrations-table th {
     color: var(--color-surface-300);
     background: rgb(var(--color-surface-700));
@@ -500,21 +500,58 @@
 
   .migrations-table td {
     padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
     font-size: 0.875rem;
     color: #111827;
   }
 
   :global([data-mode="dark"]) .migrations-table td {
-    border-bottom-color: rgb(var(--color-surface-700));
     color: var(--color-surface-100);
   }
 
-  .migrations-table tbody tr:hover {
+  .migration-main-row td {
+    padding-bottom: 0.25rem;
+  }
+
+  .migration-main-row td:last-child {
+    text-align: right;
+  }
+
+  .migrations-table thead th:last-child {
+    text-align: right;
+  }
+
+  .migration-meta-row td {
+    padding-top: 0;
+    padding-bottom: 0.25rem;
+  }
+
+  .meta-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .migration-desc-row td {
+    padding-top: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  :global([data-mode="dark"]) .migration-desc-row td {
+    border-bottom-color: rgb(var(--color-surface-700));
+  }
+
+  .migrations-table tbody tr.migration-main-row:hover,
+  .migrations-table tbody tr.migration-main-row:hover + tr.migration-meta-row,
+  .migrations-table tbody tr.migration-main-row:hover + tr.migration-meta-row + tr.migration-desc-row {
     background: #f9fafb;
   }
 
-  :global([data-mode="dark"]) .migrations-table tbody tr:hover {
+  :global([data-mode="dark"]) .migrations-table tbody tr.migration-main-row:hover,
+  :global([data-mode="dark"]) .migrations-table tbody tr.migration-main-row:hover + tr.migration-meta-row,
+  :global([data-mode="dark"]) .migrations-table tbody tr.migration-main-row:hover + tr.migration-meta-row + tr.migration-desc-row {
     background: rgb(var(--color-surface-700));
   }
 
@@ -522,25 +559,53 @@
     border-bottom: none;
   }
 
+  .description-label {
+    font-weight: 600;
+    color: #6b7280;
+    margin-right: 0.5rem;
+  }
+
+  :global([data-mode="dark"]) .description-label {
+    color: var(--color-surface-400);
+  }
+
   .id-cell {
     font-family: monospace;
-    font-size: 0.8125rem;
+    font-size: 0.625rem;
+    color: #6b7280;
     white-space: nowrap;
+  }
+
+  :global([data-mode="dark"]) .id-cell {
+    color: var(--color-surface-400);
   }
 
   .name-cell {
     font-weight: 500;
+    white-space: nowrap;
   }
 
   .timestamp-cell {
     font-family: monospace;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    color: #6b7280;
     white-space: nowrap;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  :global([data-mode="dark"]) .timestamp-cell {
+    color: var(--color-surface-400);
   }
 
   .description-cell {
-    max-width: 400px;
-    word-wrap: break-word;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    word-break: break-word;
+  }
+
+  :global([data-mode="dark"]) .description-cell {
+    color: var(--color-surface-400);
   }
 
   .status-badge {
@@ -553,42 +618,42 @@
     letter-spacing: 0.025em;
   }
 
-  .status-success {
+  :global(.status-success) {
     background: #d1fae5;
     color: #065f46;
   }
 
-  :global([data-mode="dark"]) .status-success {
-    background: rgb(var(--color-success-900));
-    color: rgb(var(--color-success-200));
+  :global([data-mode="dark"] .status-success) {
+    background: rgba(16, 185, 129, 0.2);
+    color: rgb(110, 231, 183);
   }
 
-  .status-pending {
+  :global(.status-pending) {
     background: #dbeafe;
     color: #1e40af;
   }
 
-  :global([data-mode="dark"]) .status-pending {
+  :global([data-mode="dark"] .status-pending) {
     background: rgba(59, 130, 246, 0.2);
     color: rgb(147, 197, 253);
   }
 
-  .status-error {
+  :global(.status-error) {
     background: #fee2e2;
     color: #991b1b;
   }
 
-  :global([data-mode="dark"]) .status-error {
-    background: rgb(var(--color-error-900));
-    color: rgb(var(--color-error-200));
+  :global([data-mode="dark"] .status-error) {
+    background: rgba(239, 68, 68, 0.2);
+    color: rgb(252, 165, 165);
   }
 
-  .status-default {
+  :global(.status-default) {
     background: #e5e7eb;
     color: #374151;
   }
 
-  :global([data-mode="dark"]) .status-default {
+  :global([data-mode="dark"] .status-default) {
     background: rgb(var(--color-surface-700));
     color: var(--color-surface-300);
   }

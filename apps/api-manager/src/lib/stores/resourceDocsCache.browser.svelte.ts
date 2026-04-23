@@ -72,7 +72,7 @@ class ResourceDocsCacheBrowser {
     try {
       logger.info("Fetching resource docs from API...");
 
-      const response = await fetch("/api/resource-docs");
+      const response = await fetch("/proxy/obp/v6.0.0/resource-docs/v6.0.0/obp");
 
       if (!response.ok) {
         throw new Error(

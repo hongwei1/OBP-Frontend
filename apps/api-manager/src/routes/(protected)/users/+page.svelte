@@ -1,13 +1,13 @@
 <script lang="ts">
   import { Mail } from "@lucide/svelte";
-  import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
   import { page } from "$app/state";
   import type { PageData } from "./$types";
 
   let { data } = $props<{ data: PageData }>();
 
-  let roleFilter = $state(page.url.searchParams.get("role_name") || "");
-  let bankIdFilter = $state(page.url.searchParams.get("bank_id") || "");
+  let roleFilter = $state(page.url.searchParams.get("role_name") ?? "");
+  let bankIdFilter = $state(page.url.searchParams.get("bank_id") ?? "");
   let roles = $state<string[]>([]);
   let banks = $state<string[]>([]);
 
@@ -15,7 +15,7 @@
   $effect(() => {
     async function fetchRoles() {
       try {
-        const response = await fetch("/api/rbac/roles-metadata");
+        const response = await fetch("/proxy/obp/v6.0.0/roles");
         const result = await response.json();
         if (result.roles) {
           roles = result.roles.map((r: any) => r.role).sort();
@@ -26,10 +26,10 @@
     }
     async function fetchBanks() {
       try {
-        const response = await fetch("/api/banks");
+        const response = await fetch("/proxy/obp/v6.0.0/banks");
         const result = await response.json();
         if (result.banks) {
-          banks = result.banks.map((b: any) => b.id).sort();
+          banks = result.banks.map((b: any) => b.bank_id).sort();
         }
       } catch (err) {
         console.error("Error fetching banks:", err);
@@ -39,29 +39,29 @@
     fetchBanks();
   });
 
-  let users = $derived(data.users || []);
   let hasApiAccess = $derived(data.hasApiAccess);
   let error = $derived(data.error);
 
   let providers = $state<string[]>([]);
   let selectedProvider = $state("");
   let searchQuery = $state("");
+  let lastSearchedQuery = $state("");
   let searchResults = $state<any[]>([]);
   let searchError = $state<string | null>(null);
   let isSearching = $state(false);
   let searchType = $state<"email" | "userid" | "username" | "">("");
+  let sortBy = $state("");
+  let sortDirection = $state<"asc" | "desc">("desc");
+  let lastSearchCall = $state<{ proxyUrl: string; obpPath: string; status?: number; responseBody?: string } | null>(null);
 
   // Fetch providers on mount
   $effect(() => {
     async function fetchProviders() {
       try {
-        const response = await fetch("/api/users/providers");
+        const response = await fetch("/proxy/obp/v6.0.0/providers");
         const result = await response.json();
         if (result.providers) {
           providers = result.providers;
-          if (providers.length > 0) {
-            selectedProvider = providers[0];
-          }
         }
       } catch (err) {
         console.error("Error fetching providers:", err);
@@ -69,6 +69,22 @@
     }
     fetchProviders();
   });
+
+  // Auto-run search on mount (URL filters if present, else empty search)
+  onMount(() => {
+    handleSearch();
+  });
+
+  function handleClear() {
+    searchQuery = "";
+    selectedProvider = "";
+    roleFilter = "";
+    bankIdFilter = "";
+    sortBy = "";
+    sortDirection = "desc";
+    history.replaceState(null, "", "/users");
+    handleSearch();
+  }
 
   // Detect search type based on input
   function detectSearchType(input: string): "email" | "userid" | "username" {
@@ -87,61 +103,63 @@
   }
 
   async function handleSearch() {
-    if (!searchQuery.trim()) {
-      searchResults = [];
-      searchError = null;
-      searchType = "";
-      return;
-    }
-
-    const type = detectSearchType(searchQuery.trim());
-    searchType = type;
+    const query = searchQuery.trim();
     isSearching = true;
     searchError = null;
+    lastSearchedQuery = query;
+
+    const params = new URLSearchParams();
+    params.set("limit", "100");
+    if (query) {
+      const type = detectSearchType(query);
+      searchType = type;
+      if (type === "email") {
+        params.set("email", query);
+      } else if (type === "userid") {
+        params.set("user_id", query);
+      } else {
+        params.set("username", query);
+      }
+    } else {
+      searchType = "";
+    }
+    if (selectedProvider) {
+      params.set("provider", selectedProvider);
+    }
+    if (roleFilter) {
+      params.set("role_name", roleFilter);
+    }
+    if (bankIdFilter) {
+      params.set("bank_id", bankIdFilter);
+    }
+    if (sortBy) {
+      params.set("sort_by", sortBy);
+      params.set("sort_direction", sortDirection);
+    }
+    const proxyUrl = `/proxy/obp/v6.0.0/users?${params.toString()}`;
+
+    const obpPath = proxyUrl.replace(/^\/proxy/, "");
+    lastSearchCall = { proxyUrl, obpPath };
 
     try {
-      let response;
+      const response = await fetch(proxyUrl);
+      const responseText = await response.text();
+      lastSearchCall = { proxyUrl, obpPath, status: response.status, responseBody: responseText };
 
-      if (type === "email") {
-        // Search by email (OBPv4.0.0)
-        response = await fetch(
-          `/api/users/search-by-email?email=${encodeURIComponent(searchQuery)}`,
-        );
-      } else if (type === "userid") {
-        // Search by user ID (OBPv4.0.0)
-        response = await fetch(
-          `/api/users/search-by-userid?user_id=${encodeURIComponent(searchQuery)}`,
-        );
-      } else {
-        // Search by provider and username (OBPv5.1.0)
-        if (!selectedProvider) {
-          console.error("Provider is required for username search");
-          searchResults = [];
-          isSearching = false;
-          return;
-        }
-        response = await fetch(
-          `/api/users/search-by-provider-username?provider=${encodeURIComponent(selectedProvider)}&username=${encodeURIComponent(searchQuery)}`,
-        );
-      }
-
-      const result = await response.json();
+      const result = responseText ? JSON.parse(responseText) : {};
 
       if (!response.ok) {
-        searchError = result.error || `Search failed (HTTP ${response.status})`;
+        if (typeof result.message !== "string") {
+          throw new Error(
+            `OBP error response missing 'message' field (HTTP ${response.status})`,
+          );
+        }
+        searchError = result.message;
         searchResults = [];
         return;
       }
 
-      if (result.users) {
-        // Multiple results (email search)
-        searchResults = result.users;
-      } else if (result.user) {
-        // Single result (user ID or username search)
-        searchResults = [result.user];
-      } else {
-        searchResults = [];
-      }
+      searchResults = result.users;
     } catch (err) {
       console.error("Search error:", err);
       searchError = err instanceof Error ? err.message : "Search failed — the API may be unavailable";
@@ -180,7 +198,7 @@
   {/if}
 
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-3xl font-bold">Users</h1>
+    <h1 class="text-3xl font-bold">Search Users</h1>
     <a
       href="/user-invitations"
       class="btn btn-secondary flex items-center gap-2"
@@ -192,19 +210,6 @@
 
   <!-- Smart Search Panel -->
   <div class="panel mb-6">
-    <div class="panel-header">
-      <h2 class="panel-title">Search Users</h2>
-      <div class="panel-subtitle">
-        Smart search: Enter email, user ID (UUID), or username
-        {#if searchType === "email"}
-          <span class="text-blue-600"> (Detected: Email)</span>
-        {:else if searchType === "userid"}
-          <span class="text-blue-600"> (Detected: User ID)</span>
-        {:else if searchType === "username"}
-          <span class="text-blue-600"> (Detected: Username)</span>
-        {/if}
-      </div>
-    </div>
     <div class="panel-content">
       <form
         onsubmit={(e) => {
@@ -213,25 +218,7 @@
         }}
         class="flex gap-4 items-end flex-wrap"
       >
-        <div style="flex: 0 0 300px;">
-          <label for="provider-select" class="block text-sm font-medium mb-2"
-            >Provider</label
-          >
-          <select
-            id="provider-select"
-            bind:value={selectedProvider}
-            class="form-input w-full"
-          >
-            {#if providers.length === 0}
-              <option value="">Loading providers...</option>
-            {:else}
-              {#each providers as provider}
-                <option value={provider}>{provider}</option>
-              {/each}
-            {/if}
-          </select>
-        </div>
-        <div class="flex-1">
+        <div class="flex-1" style="min-width: 240px;">
           <label for="search-input" class="block text-sm font-medium mb-2"
             >Search</label
           >
@@ -243,31 +230,22 @@
             class="form-input w-full"
           />
         </div>
-        <button
-          type="submit"
-          class="btn btn-primary"
-          disabled={isSearching || !searchQuery.trim()}
-        >
-          {isSearching ? "Searching..." : "Search"}
-        </button>
-      </form>
-
-      <form
-        onsubmit={(e) => {
-          e.preventDefault();
-          const params = new URLSearchParams();
-          if (roleFilter.trim()) {
-            params.set("role_name", roleFilter.trim());
-          }
-          if (bankIdFilter.trim()) {
-            params.set("bank_id", bankIdFilter.trim());
-          }
-          const qs = params.toString();
-          goto(qs ? `?${qs}` : "/users", { invalidateAll: true });
-        }}
-        class="flex gap-4 items-end mt-4"
-      >
-        <div class="flex-1">
+        <div style="flex: 0 0 220px;">
+          <label for="provider-select" class="block text-sm font-medium mb-2"
+            >Provider</label
+          >
+          <select
+            id="provider-select"
+            bind:value={selectedProvider}
+            class="form-input w-full"
+          >
+            <option value="">Any</option>
+            {#each providers as provider}
+              <option value={provider}>{provider}</option>
+            {/each}
+          </select>
+        </div>
+        <div style="flex: 0 0 220px;">
           <label for="role-input" class="block text-sm font-medium mb-2"
             >Role</label
           >
@@ -282,7 +260,7 @@
             {/each}
           </select>
         </div>
-        <div style="flex: 0 0 300px;">
+        <div style="flex: 0 0 220px;">
           <label for="bank-id-input" class="block text-sm font-medium mb-2"
             >Bank ID</label
           >
@@ -297,24 +275,121 @@
             {/each}
           </select>
         </div>
+        <div style="flex: 0 0 180px;">
+          <label for="sort-by-input" class="block text-sm font-medium mb-2"
+            >Sort by</label
+          >
+          <select
+            id="sort-by-input"
+            bind:value={sortBy}
+            data-testid="sort-by-input"
+            class="form-input w-full"
+          >
+            <option value="">Default</option>
+            <option value="created_date">Created date</option>
+            <option value="updated_date">Updated date</option>
+            <option value="username">Username</option>
+            <option value="email">Email</option>
+            <option value="user_id">User ID</option>
+            <option value="provider">Provider</option>
+          </select>
+        </div>
+        <div style="flex: 0 0 140px;">
+          <label for="sort-direction-input" class="block text-sm font-medium mb-2"
+            >Direction</label
+          >
+          <select
+            id="sort-direction-input"
+            bind:value={sortDirection}
+            data-testid="sort-direction-input"
+            class="form-input w-full"
+            disabled={!sortBy}
+          >
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
+          </select>
+        </div>
         <button
           type="submit"
           class="btn btn-primary"
+          disabled={isSearching}
         >
-          Filter
+          {isSearching ? "Searching..." : "Search"}
         </button>
-        {#if page.url.searchParams.has("role_name") || page.url.searchParams.has("bank_id")}
-          <a href="/users" class="btn btn-secondary">Clear</a>
-        {/if}
+        <button
+          type="button"
+          class="btn btn-secondary"
+          onclick={handleClear}
+          disabled={isSearching}
+          data-testid="clear-search"
+        >
+          Clear
+        </button>
       </form>
+
+      {#snippet technicalDetails()}
+        {#if lastSearchCall}
+          <details class="search-call-details" data-testid="last-search-call">
+            <summary class="search-call-summary" data-testid="last-search-call-toggle">Debug</summary>
+            <div class="search-call-info">
+              <div class="search-call-field">
+                <label for="last-search-proxy-url" class="search-call-label">Proxy URL</label>
+                <input
+                  id="last-search-proxy-url"
+                  type="text"
+                  readonly
+                  value={lastSearchCall.proxyUrl}
+                  data-testid="last-search-proxy-url"
+                  class="search-call-input"
+                  onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
+                />
+              </div>
+              <div class="search-call-field">
+                <label for="last-search-obp-path" class="search-call-label">OBP path</label>
+                <input
+                  id="last-search-obp-path"
+                  type="text"
+                  readonly
+                  value={lastSearchCall.obpPath}
+                  data-testid="last-search-obp-path"
+                  class="search-call-input"
+                  onclick={(e) => (e.currentTarget as HTMLInputElement).select()}
+                />
+              </div>
+              {#if lastSearchCall.status !== undefined}
+                <div class="search-call-field">
+                  <span class="search-call-label">Status</span>
+                  <span class="search-call-status" data-testid="last-search-status">{lastSearchCall.status}</span>
+                </div>
+              {/if}
+              {#if lastSearchCall.responseBody}
+                <div class="search-call-field">
+                  <label for="last-search-response-body" class="search-call-label">Response</label>
+                  <textarea
+                    id="last-search-response-body"
+                    readonly
+                    data-testid="last-search-response-body"
+                    class="search-call-textarea"
+                    onclick={(e) => (e.currentTarget as HTMLTextAreaElement).select()}
+                    rows="6"
+                  >{lastSearchCall.responseBody}</textarea>
+                </div>
+              {/if}
+            </div>
+          </details>
+        {/if}
+      {/snippet}
 
       {#if searchResults.length > 0}
         <div class="mt-6">
-          <h3 class="text-lg font-semibold mb-4">
-            {searchResults.length === 1
-              ? "Result"
-              : `Results (${searchResults.length})`}
-          </h3>
+          <div class="search-results-header mb-4">
+            <h3 class="text-lg font-semibold">
+              {searchResults.length === 1
+                ? "Result"
+                : `Results (${searchResults.length})`}
+            </h3>
+            {@render technicalDetails()}
+          </div>
           <div class="table-wrapper">
             <table class="users-table">
               <thead>
@@ -352,71 +427,26 @@
           </div>
         </div>
       {:else if searchError}
-        <div class="mt-6 alert alert-error">
-          <strong>Search error:</strong> {searchError}
+        <div class="mt-6">
+          <div class="search-results-header mb-3">
+            <strong class="text-error">Search error</strong>
+            {@render technicalDetails()}
+          </div>
+          <div class="alert alert-error">{searchError}</div>
         </div>
-      {:else if searchQuery.trim() && !isSearching}
-        <div class="mt-6 text-center text-gray-500">
-          No users found matching "{searchQuery}"
+      {:else if lastSearchCall && !isSearching}
+        <div class="mt-6">
+          <div class="search-results-header mb-3">
+            <span class="text-gray-500">
+              No users found{lastSearchedQuery ? ` matching "${lastSearchedQuery}"` : ""}
+            </span>
+            {@render technicalDetails()}
+          </div>
         </div>
       {/if}
     </div>
   </div>
 
-  <!-- Users List Panel -->
-  <div class="panel">
-    <div class="panel-header">
-      <h2 class="panel-title">{page.url.searchParams.has("role_name") || page.url.searchParams.has("bank_id") ? `Users${page.url.searchParams.has("role_name") ? ` with Role: ${page.url.searchParams.get("role_name")}` : ""}${page.url.searchParams.has("bank_id") ? ` at Bank: ${page.url.searchParams.get("bank_id")}` : ""}` : "Recent Users"}</h2>
-      <div class="panel-subtitle">{page.url.searchParams.has("role_name") || page.url.searchParams.has("bank_id") ? "Filtered results" : "Most recently created users"} (up to 100)</div>
-    </div>
-    <div class="panel-content">
-      {#if users && users.length > 0}
-        <div class="table-wrapper">
-          <table class="users-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>User ID</th>
-                <th>Provider</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each users as user}
-                <tr>
-                  <td class="font-medium">{user.username || "N/A"}</td>
-                  <td>{user.email || "N/A"}</td>
-                  <td class="font-mono text-sm">{user.user_id || "N/A"}</td>
-                  <td>{user.provider || "N/A"}</td>
-                  <td>
-                    {#if user.user_id}
-                      <a
-                        href="/users/{encodeURIComponent(user.user_id)}"
-                        class="text-blue-600 hover:text-blue-800 underline"
-                      >
-                        Details
-                      </a>
-                    {:else}
-                      <span class="text-gray-400">N/A</span>
-                    {/if}
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {:else if hasApiAccess}
-        <div class="empty-state">
-          <p>No users found</p>
-        </div>
-      {:else}
-        <div class="empty-state">
-          <p>Unable to load users. Please check your API access.</p>
-        </div>
-      {/if}
-    </div>
-  </div>
 </div>
 
 <style>
@@ -621,5 +651,89 @@
     background: rgb(var(--color-error-900));
     color: rgb(var(--color-error-200));
     border-color: rgb(var(--color-error-800));
+  }
+
+  .search-results-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .search-call-details {
+    font-size: 0.8125rem;
+  }
+
+  .search-call-details[open] {
+    flex-basis: 100%;
+  }
+
+  .search-call-summary {
+    padding: 0.25rem 0;
+    cursor: pointer;
+    font-weight: 600;
+    color: #6b7280;
+    user-select: none;
+  }
+
+  :global([data-mode="dark"]) .search-call-summary {
+    color: var(--color-surface-400);
+  }
+
+  .search-call-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .search-call-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .search-call-label {
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  :global([data-mode="dark"]) .search-call-label {
+    color: var(--color-surface-400);
+  }
+
+  .search-call-input,
+  .search-call-textarea {
+    width: 100%;
+    padding: 0.375rem 0.5rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+    color: #111827;
+  }
+
+  :global([data-mode="dark"]) .search-call-input,
+  :global([data-mode="dark"]) .search-call-textarea {
+    background: rgb(var(--color-surface-800));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-100);
+  }
+
+  .search-call-textarea {
+    resize: vertical;
+    min-height: 4rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .search-call-status {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
   }
 </style>

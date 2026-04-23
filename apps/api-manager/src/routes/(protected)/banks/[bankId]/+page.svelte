@@ -14,7 +14,7 @@
   $effect(() => {
     if (bank) {
       const attrs = bank.bank_attributes?.length || 0;
-      pageDataSummary.set(`Viewing bank ${bank.full_name} (${bank.bank_id}, code: ${bank.bank_code})${attrs ? `, ${attrs} attributes` : ""}`);
+      pageDataSummary.set(`Viewing bank ${bank.full_name}${attrs ? `, ${attrs} attributes` : ""}`);
       pageHeading.set(bank.full_name);
     }
   });
@@ -53,7 +53,7 @@
     isSubmittingAttr = true;
 
     try {
-      const response = await trackedFetch(`/api/banks/${bank.bank_id}/attributes`, {
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/banks/${bank.bank_id}/attribute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -66,7 +66,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create attribute");
+        throw new Error(errorData.message);
       }
 
       toast.success("Attribute Created", `Successfully created attribute "${attrName}"`);

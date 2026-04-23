@@ -275,7 +275,7 @@
   async function refetchMyRecords() {
     try {
       const response = await fetch(
-        `/api/dynamic-entities/personal/${entityName}/my`,
+        `/proxy/obp/dynamic-entity/my/${entityName}`,
         { credentials: "include" },
       );
       if (response.ok) {
@@ -299,7 +299,7 @@
       const convertedData = convertFormDataToApiFormat(formData);
 
       const response = await fetch(
-        `/api/dynamic-entities/personal/${entityName}/my`,
+        `/proxy/obp/dynamic-entity/my/${entityName}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -349,7 +349,7 @@
       const convertedData = convertFormDataToApiFormat(formData);
 
       const response = await fetch(
-        `/api/dynamic-entities/personal/${entityName}/my/${recordId}`,
+        `/proxy/obp/dynamic-entity/my/${entityName}/${recordId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -394,7 +394,7 @@
 
     try {
       const response = await fetch(
-        `/api/dynamic-entities/personal/${entityName}/my/${recordId}`,
+        `/proxy/obp/dynamic-entity/my/${entityName}/${recordId}`,
         {
           method: "DELETE",
           credentials: "include",

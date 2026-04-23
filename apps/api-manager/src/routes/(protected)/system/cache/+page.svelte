@@ -21,11 +21,11 @@
       isLoadingConfig = true;
       errorConfig = null;
 
-      const response = await fetch("/api/cache/config");
+      const response = await fetch("/proxy/obp/v6.0.0/system/cache/config");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch cache config (${response.status}): ${errorMsg}`,
         );
@@ -33,8 +33,8 @@
 
       const data = await response.json();
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (data.message) {
+        throw new Error(data.message);
       }
 
       cacheConfig = data;
@@ -51,11 +51,11 @@
       isLoadingInfo = true;
       errorInfo = null;
 
-      const response = await fetch("/api/cache/info");
+      const response = await fetch("/proxy/obp/v6.0.0/system/cache/info");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch cache info (${response.status}): ${errorMsg}`,
         );
@@ -63,8 +63,8 @@
 
       const data = await response.json();
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (data.message) {
+        throw new Error(data.message);
       }
 
       cacheInfo = data;
@@ -88,7 +88,7 @@
       errorInvalidate = null;
       successMessage = null;
 
-      const response = await fetch("/api/cache/invalidate", {
+      const response = await fetch("/backend/cache/invalidate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -98,7 +98,7 @@
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to invalidate cache (${response.status}): ${errorMsg}`,
         );

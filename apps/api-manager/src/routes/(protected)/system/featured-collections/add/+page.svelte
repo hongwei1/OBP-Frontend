@@ -60,7 +60,7 @@
         sort_order: sortOrder,
       };
 
-      const response = await trackedFetch("/api/featured-collections", {
+      const response = await trackedFetch("/backend/featured-collections", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -71,7 +71,7 @@
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.error || "Failed to add collection to featured",
+          errorData.message,
         );
       }
 

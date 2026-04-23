@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { Landmark, ArrowLeft, Loader2, User, Tag, Route, Copy, Check, Plus, FileSignature } from "@lucide/svelte";
+  import { Landmark, ArrowLeft, Loader2, User, Tag, Route, Copy, Check, Plus, FileSignature, Link } from "@lucide/svelte";
   import { trackedFetch } from "$lib/utils/trackedFetch";
   import MissingRoleAlert from "$lib/components/MissingRoleAlert.svelte";
 
@@ -50,7 +50,7 @@
     if (account) {
       const views = account.views_available?.length || 0;
       const label = account.label || account.account_id || "";
-      pageDataSummary.set(`Viewing account ${label} at ${account.bank_id}, ${views} views available`);
+      pageDataSummary.set(`Viewing account ${label}, ${views} views available`);
       pageHeading.set(label);
     }
   });
@@ -92,7 +92,7 @@
     accessCheckDone = false;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/views/${encodeURIComponent(viewId)}/has-account-access`
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/views/${encodeURIComponent(viewId)}/has-account-access`
       );
       if (res.ok) {
         const data = await res.json();
@@ -118,7 +118,7 @@
     error = null;
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/${encodeURIComponent(viewId)}/account`
+        `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/${encodeURIComponent(viewId)}/account`
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -143,7 +143,7 @@
       views.map(async (view) => {
         const vid = viewId_(view);
         const res = await trackedFetch(
-          `/api/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/views/${encodeURIComponent(vid)}/users-with-access`
+          `/proxy/obp/v6.0.0/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/views/${encodeURIComponent(vid)}/users-with-access`
         );
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -194,13 +194,42 @@
     usersWithAccess = null;
     usersByView = new Map();
     viewErrors = new Map();
-    // Run access check and account fetch in parallel — access check is informational only
+    customerAccountLinks = [];
+    customerAccountLinksError = null;
+    // Run access check, account fetch, and customer links fetch in parallel
     await Promise.all([
       checkAccountAccess(bankId, accountId, viewId),
       fetchAccount(bankId, accountId, viewId),
+      fetchCustomerAccountLinks(bankId, accountId),
     ]);
     if (account?.views_available?.length) {
       await fetchUsersWithAccess(bankId, accountId, account.views_available);
+    }
+  }
+
+  // Customer Account Links
+  let customerAccountLinks = $state<any[]>([]);
+  let customerAccountLinksLoading = $state(false);
+  let customerAccountLinksError = $state<string | null>(null);
+
+  async function fetchCustomerAccountLinks(bankId: string, accountId: string) {
+    customerAccountLinksLoading = true;
+    customerAccountLinksError = null;
+    try {
+      const res = await trackedFetch(
+        `/backend/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/customer-account-links`
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to fetch customer account links");
+      }
+      const data = await res.json();
+      customerAccountLinks = data.links || [];
+    } catch (err) {
+      customerAccountLinksError = err instanceof Error ? err.message : "Failed to fetch customer account links";
+      customerAccountLinks = [];
+    } finally {
+      customerAccountLinksLoading = false;
     }
   }
 
@@ -221,7 +250,7 @@
 
     try {
       const res = await trackedFetch(
-        `/api/obp/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/products/${encodeURIComponent(productCode)}/attribute`,
+        `/proxy/obp/v3.1.0/banks/${encodeURIComponent(bankId)}/accounts/${encodeURIComponent(accountId)}/products/${encodeURIComponent(productCode)}/attribute`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -519,6 +548,42 @@
             </div>
           {:else if !showAddAttribute}
             <p class="no-attributes">No account attributes</p>
+          {/if}
+        </section>
+
+        <!-- Customer Account Links -->
+        <section class="info-section">
+          <h2 class="section-title">
+            <Link size={16} />
+            Customer Account Links
+            {#if !customerAccountLinksLoading && !customerAccountLinksError}
+              ({customerAccountLinks.length})
+            {/if}
+          </h2>
+          {#if customerAccountLinksLoading}
+            <div class="cal-loading">
+              <Loader2 size={16} class="spinner-icon" />
+              <span>Loading customer links...</span>
+            </div>
+          {:else if customerAccountLinksError}
+            <p class="no-attributes">{customerAccountLinksError}</p>
+          {:else if customerAccountLinks.length > 0}
+            <div class="cal-list">
+              {#each customerAccountLinks as cal}
+                <div class="cal-item" data-testid="cal-{cal.customer_account_link_id}">
+                  <a
+                    href="/customers/{encodeURIComponent(cal.bank_id)}/{encodeURIComponent(cal.customer_id)}"
+                    class="cal-customer-link"
+                    data-testid="cal-customer-detail-link"
+                  >
+                    {cal.legal_name || cal.customer_id}
+                  </a>
+                  <span class="cal-relationship">{cal.relationship_type}</span>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <p class="no-attributes">No customer account links</p>
           {/if}
         </section>
 
@@ -1185,6 +1250,73 @@
 
   :global([data-mode="dark"]) .no-attributes {
     color: var(--color-surface-500);
+  }
+
+  /* Customer Account Links */
+  .cal-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.813rem;
+    color: #6b7280;
+    padding: 0.5rem 0;
+  }
+
+  :global([data-mode="dark"]) .cal-loading {
+    color: var(--color-surface-400);
+  }
+
+  .cal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .cal-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.813rem;
+  }
+
+  .cal-item:hover {
+    background: #f9fafb;
+  }
+
+  :global([data-mode="dark"]) .cal-item:hover {
+    background: rgb(var(--color-surface-700));
+  }
+
+  .cal-customer-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 0.813rem;
+    font-weight: 500;
+  }
+
+  .cal-customer-link:hover {
+    text-decoration: underline;
+  }
+
+  :global([data-mode="dark"]) .cal-customer-link {
+    color: rgb(var(--color-primary-400));
+  }
+
+  .cal-relationship {
+    display: inline-block;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: #eff6ff;
+    color: #1e40af;
+  }
+
+  :global([data-mode="dark"]) .cal-relationship {
+    background: rgba(59, 130, 246, 0.15);
+    color: rgb(var(--color-primary-300));
   }
 
   /* Add attribute */

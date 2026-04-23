@@ -5,6 +5,17 @@
   import type { PageData } from "./$types";
   import { configHelpers } from "$lib/config";
   import MetricsQueryForm from "$lib/components/metrics/MetricsQueryForm.svelte";
+  import { toast } from "$lib/utils/toastService";
+
+  async function copyToClipboard(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.info(`${label} copied to clipboard`);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      toast.error(`Failed to copy ${label}`);
+    }
+  }
 
   let { data } = $props<{ data: PageData }>();
 
@@ -21,9 +32,26 @@
     return `${apiExplorerUrl}/resource-docs/OBPv6.0.0?operationid=${operationId}`;
   }
 
-  let metrics = $derived(data.metrics);
   let hasApiAccess = $derived(data.hasApiAccess);
   let error = $derived(data.error);
+
+  // Transport: user explicitly chooses REST or gRPC.
+  let transport = $state<"rest" | "grpc">("rest");
+  let eventSource: EventSource | null = null;
+  let streamConnected = $state(false);
+  let transportReason = $state<string>("");
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let streamedMetrics = $state<any[]>([]);
+  let pendingMetrics: any[] = [];
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  let frozen = $state(false);
+  let nextMetricId = 0;
+
+  let metrics = $derived(
+    transport === "grpc"
+      ? { count: streamedMetrics.length, metrics: streamedMetrics }
+      : data.metrics,
+  );
 
   // Debug reactive statements
   $effect(() => {
@@ -38,14 +66,11 @@
     }
   });
 
-  // Debug data prop changes
+  // Mark results as fresh when new data arrives from the server load
   $effect(() => {
-    console.log("data prop updated:", {
-      hasMetrics: !!data.metrics,
-      metricsCount: data.metrics?.count,
-      lastUpdated: data.lastUpdated,
-      timestamp: new Date().toLocaleTimeString(),
-    });
+    if (data.lastUpdated) {
+      queryStatus = "fresh";
+    }
   });
 
   let refreshInterval: number | undefined = undefined;
@@ -53,10 +78,20 @@
   let timeUpdateInterval: number | undefined = undefined;
   let currentTime = $state(new Date().toLocaleString());
   let lastRefreshTime = $state(new Date().toLocaleString());
+  const REFRESH_OPTIONS = [
+    { value: 5, label: "5s" },
+    { value: 10, label: "10s" },
+    { value: 30, label: "30s" },
+    { value: 60, label: "60s" },
+    { value: 0, label: "Off" },
+  ];
+  let refreshSeconds = $state(5);
   let countdown = $state(5);
   let isCountingDown = $state(false);
   let timestampColorIndex = $state(0);
   let showUrl = $state(false);
+  let filtersExpanded = $state(false);
+  let queryStatus: "fresh" | "dirty" = $state("fresh");
 
   // Configuration information
   let obpInfo = $derived(configHelpers.getObpConnectionInfo());
@@ -88,7 +123,7 @@
     direction: "desc",
     consumer_id: "",
     user_id: "",
-    user_name: "",
+    username: "",
     anon: "",
     url: "",
     app_name: "",
@@ -125,7 +160,7 @@
         direction: urlParams.get("direction") || "desc",
         consumer_id: urlParams.get("consumer_id") || "",
         user_id: urlParams.get("user_id") || "",
-        user_name: urlParams.get("user_name") || "",
+        username: urlParams.get("username") || "",
         anon: urlParams.get("anon") || "",
         url: urlParams.get("url") || "",
         app_name: urlParams.get("app_name") || "",
@@ -139,8 +174,10 @@
         http_status_code: urlParams.get("http_status_code") || "",
       };
 
-      // Sync URL with form values and start auto-refresh
-      refreshMetrics();
+      // Sync URL with form values
+      submitQuery();
+
+      // Default transport is REST with polling; user can switch to gRPC.
       startAutoRefresh();
 
       // Update current time every second
@@ -162,67 +199,27 @@
       if (timeUpdateInterval) {
         clearInterval(timeUpdateInterval);
       }
+      closeStream();
     };
   });
 
-  function refreshMetrics() {
-    console.log("refreshMetrics called at", new Date().toLocaleTimeString());
-    console.log("Current queryForm.limit:", queryForm.limit);
-
-    // Update last refresh timestamp and alternate color
-    lastRefreshTime = new Date().toLocaleString();
-    timestampColorIndex = (timestampColorIndex + 1) % 2;
-
-    // Use currentQueryString - this is the ON_PAGE_METRICS_REQUEST_URL query params
-    console.log("ON_PAGE_METRICS_REQUEST_URL params:", currentQueryString);
-
-    // Call API endpoint directly with the ON_PAGE_METRICS_REQUEST_URL params
-    fetch(`/api/metrics?${currentQueryString}`)
-      .then((response) => response.json())
-      .then((result) => {
-        if (result.error) {
-          console.error("API error:", result.error);
-          metrics = { metrics: [], count: 0, error: result.error };
-        } else if (result.metrics) {
-          metrics = {
-            metrics: result.metrics,
-            count: result.count,
-          };
-          console.log("Metrics fetched, count:", result.count);
-        }
-      })
-      .catch((err) => {
-        console.error("Fetch error:", err);
-        metrics = { metrics: [], count: 0, error: "Failed to fetch metrics" };
-      });
-  }
-
-  function submitQuery() {
-    // Just call refreshMetrics since it already handles the form data
-    refreshMetrics();
-  }
-
-  // Reactive derived value that updates whenever queryForm changes
-  let currentQueryString = $derived.by(() => {
+  function buildQueryString(): string {
     const params = new URLSearchParams();
 
-    // Add date filters only if they have values
     if (queryForm.from_date && queryForm.from_date.trim() !== "") {
       params.set("from_date", formatDateForAPI(queryForm.from_date));
     }
     if (queryForm.to_date && queryForm.to_date.trim() !== "") {
       params.set("to_date", formatDateForAPI(queryForm.to_date));
     }
-
-    // Add other filters if they have values
     if (queryForm.verb && queryForm.verb.trim() !== "") {
       params.set("verb", queryForm.verb);
     }
     if (queryForm.app_name && queryForm.app_name.trim() !== "") {
       params.set("app_name", queryForm.app_name);
     }
-    if (queryForm.user_name && queryForm.user_name.trim() !== "") {
-      params.set("user_name", queryForm.user_name);
+    if (queryForm.username && queryForm.username.trim() !== "") {
+      params.set("username", queryForm.username);
     }
     if (queryForm.url && queryForm.url.trim() !== "") {
       params.set("url", queryForm.url);
@@ -248,42 +245,228 @@
     ) {
       params.set("http_status_code", queryForm.http_status_code);
     }
+    if (queryForm.user_id && queryForm.user_id.trim() !== "") {
+      params.set("user_id", queryForm.user_id);
+    }
+    if (
+      queryForm.implemented_by_partial_function &&
+      queryForm.implemented_by_partial_function.trim() !== ""
+    ) {
+      params.set(
+        "implemented_by_partial_function",
+        queryForm.implemented_by_partial_function,
+      );
+    }
+    if (
+      queryForm.implemented_in_version &&
+      queryForm.implemented_in_version.trim() !== ""
+    ) {
+      params.set("implemented_in_version", queryForm.implemented_in_version);
+    }
+    if (queryForm.correlation_id && queryForm.correlation_id.trim() !== "") {
+      params.set("correlation_id", queryForm.correlation_id);
+    }
 
-    // Always include pagination and sorting
-    params.set("limit", queryForm.limit);
-    params.set("offset", queryForm.offset);
+    params.set("limit", String(queryForm.limit));
+    params.set("offset", String(queryForm.offset));
     params.set("sort_by", queryForm.sort_by);
     params.set("direction", queryForm.direction);
 
     return params.toString();
-  });
+  }
+
+  let currentQueryString = $state(buildQueryString());
+
+  function submitQuery() {
+    currentQueryString = buildQueryString();
+    lastRefreshTime = new Date().toLocaleString();
+    timestampColorIndex = (timestampColorIndex + 1) % 2;
+
+    const newUrl = `/metrics?${currentQueryString}`;
+    console.log("Query:", newUrl);
+    goto(newUrl, { replaceState: true, noScroll: true, invalidateAll: true });
+  }
 
   function startAutoRefresh() {
-    // Start 5-second auto-refresh cycle
-    countdown = 5;
-    isCountingDown = true;
-
     if (refreshInterval) clearInterval(refreshInterval);
     if (countdownInterval) clearInterval(countdownInterval);
 
-    console.log("Starting auto-refresh countdown from 5");
+    // "Off" — keep the page, just don't auto-refresh.
+    if (refreshSeconds <= 0) {
+      isCountingDown = false;
+      countdown = 0;
+      return;
+    }
+
+    countdown = refreshSeconds;
+    isCountingDown = true;
+
     countdownInterval = setInterval(() => {
       countdown--;
-      console.log("Countdown:", countdown);
       if (countdown <= 0) {
-        console.log("Countdown reached 0, refreshing...");
-        refreshMetrics();
-        countdown = 5;
+        lastRefreshTime = new Date().toLocaleString();
+        timestampColorIndex = (timestampColorIndex + 1) % 2;
+        invalidate("app:metrics");
+        countdown = refreshSeconds;
       }
     }, 1000);
   }
 
+  function handleRefreshIntervalChange() {
+    if (transport === "rest") startAutoRefresh();
+  }
+
+  function stopAutoRefresh() {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = undefined;
+    }
+    isCountingDown = false;
+  }
+
+  function flushPendingMetrics() {
+    flushTimer = null;
+    if (frozen) return;
+    if (pendingMetrics.length === 0) return;
+    const incoming = pendingMetrics;
+    pendingMetrics = [];
+    // Newest first, same as REST display.
+    streamedMetrics = [...incoming.reverse(), ...streamedMetrics].slice(0, 500);
+    lastRefreshTime = new Date().toLocaleString();
+    timestampColorIndex = (timestampColorIndex + 1) % 2;
+  }
+
+  function scheduleFlush() {
+    if (flushTimer) return;
+    flushTimer = setTimeout(flushPendingMetrics, 200);
+  }
+
+  function toggleFrozen() {
+    frozen = !frozen;
+    if (frozen) {
+      // Freeze also halts REST polling so the table stays put.
+      if (transport === "rest") stopAutoRefresh();
+    } else {
+      flushPendingMetrics();
+      // Resume REST polling if the user had a refresh interval set.
+      if (transport === "rest") startAutoRefresh();
+    }
+  }
+
+  function buildStreamUrl(): string {
+    const params = new URLSearchParams();
+    if (queryForm.consumer_id) params.set("consumer_id", queryForm.consumer_id);
+    if (queryForm.user_id) params.set("user_id", queryForm.user_id);
+    if (queryForm.verb) params.set("verb", queryForm.verb);
+    if (queryForm.url) params.set("url_substring", queryForm.url);
+    if (queryForm.implemented_by_partial_function)
+      params.set(
+        "implemented_by_partial_function",
+        queryForm.implemented_by_partial_function,
+      );
+    if (queryForm.app_name) params.set("app_name", queryForm.app_name);
+    return `/backend/metrics/stream?${params.toString()}`;
+  }
+
+  function closeStream() {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    streamConnected = false;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    pendingMetrics = [];
+  }
+
+  function connectStream() {
+    closeStream();
+    eventSource = new EventSource(buildStreamUrl());
+
+    eventSource.onopen = () => {
+      streamConnected = true;
+      transportReason = "";
+      streamedMetrics = [];
+      stopAutoRefresh();
+    };
+
+    eventSource.onmessage = (event) => {
+      try {
+        const entry = JSON.parse(event.data);
+        // Client-side filters: gRPC StreamMetricsRequest doesn't accept these
+        // server-side, so we apply them here to match REST semantics.
+        // duration input is type="number", so Svelte may bind it as a number —
+        // coerce to string before checking.
+        const durationRaw = String(queryForm.duration ?? "").trim();
+        if (durationRaw !== "") {
+          const minDuration = parseInt(durationRaw, 10);
+          // REST semantic: duration > threshold (strictly greater).
+          if (!isNaN(minDuration) && entry.duration <= minDuration) return;
+        }
+        const codeRaw = String(queryForm.http_status_code ?? "").trim();
+        if (codeRaw !== "") {
+          const wantCode = parseInt(codeRaw, 10);
+          if (!isNaN(wantCode) && entry.status_code !== wantCode) return;
+        }
+        entry.__id = nextMetricId++;
+        pendingMetrics.push(entry);
+        scheduleFlush();
+      } catch (err) {
+        console.error("gRPC event processing error:", err);
+      }
+    };
+
+    eventSource.addEventListener("transport-error", (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data);
+        transportReason = payload.reason || "gRPC transport error";
+      } catch {
+        transportReason = "gRPC transport error";
+      }
+    });
+
+    eventSource.onerror = () => {
+      streamConnected = false;
+      if (!transportReason) transportReason = "SSE connection to server failed";
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      // Respect the user's transport choice — only retry if still on gRPC.
+      if (transport === "grpc") {
+        reconnectTimer = setTimeout(connectStream, 10000);
+      }
+    };
+  }
+
+  function setTransport(next: "rest" | "grpc") {
+    if (next === transport) return;
+    transport = next;
+    if (next === "grpc") {
+      stopAutoRefresh();
+      connectStream();
+    } else {
+      closeStream();
+      streamedMetrics = [];
+      startAutoRefresh();
+      // Kick an immediate REST fetch so the table populates right away.
+      invalidate("app:metrics");
+    }
+  }
+
   function handleFieldChange() {
-    // Immediately refresh when field changes
-    console.log("Field changed, refreshing immediately");
-    refreshMetrics();
-    // Restart the normal 5-second auto-refresh cycle
-    startAutoRefresh();
+    submitQuery();
+    if (transport === "grpc") {
+      connectStream();
+    } else {
+      startAutoRefresh();
+    }
   }
 
   function clearQuery() {
@@ -296,7 +479,7 @@
       direction: "desc",
       consumer_id: "",
       user_id: "",
-      user_name: "",
+      username: "",
       anon: "",
       url: "",
       app_name: "",
@@ -372,58 +555,121 @@
 
   <!-- Panel 1: Query Interface -->
   <div class="panel full-width-panel">
-    <div class="panel-header">
-      <h2 class="panel-title">Query Metrics</h2>
-      <div class="panel-subtitle">
-        Search and filter API metrics with custom parameters
+    <div class="panel-header-compact">
+      <div class="panel-header-row">
+        <h2 class="panel-title">Metrics Query</h2>
+        <div class="panel-meta">
+          <button
+            class="header-btn query-btn"
+            onclick={submitQuery}
+            data-testid="query-btn"
+          >
+            <span class="status-dot" data-status={queryStatus}></span> Query
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="panel-content">
-      <!-- Query Form -->
+    <div class="panel-content" oninput={() => queryStatus = "dirty"}>
       <MetricsQueryForm
         bind:queryForm
+        bind:filtersExpanded
         onFieldChange={handleFieldChange}
         onClear={clearQuery}
         onSubmit={submitQuery}
         showAutoRefresh={false}
-        showClearButton={true}
+        showClearButton={false}
         showRefreshButton={false}
+        {transport}
       />
     </div>
   </div>
 
-  <!-- Panel 2: API Metrics Results -->
+  <!-- Panel 2: Results -->
   <div class="panel full-width-panel">
     <div class="panel-header-compact">
       <div class="panel-header-row">
-        <h2 class="panel-title">API Metrics Results</h2>
+        <h2 class="panel-title">Results{#if metrics?.metrics && metrics.metrics.length > 0} <span class="panel-title-count">— {metrics.count} calls from {obpInfo.displayName}</span>{/if}</h2>
         <div class="panel-meta">
-          <button
-            class="url-toggle"
-            onclick={() => showUrl = !showUrl}
-            title={showUrl ? "Hide URL" : "Show URL"}
-          >
-            {showUrl ? "▼" : "▶"} URL
-          </button>
-          <span class="meta-separator">•</span>
-          <span class="timestamp-color-{timestampColorIndex}">{lastRefreshTime}</span>
-          <span class="meta-separator">•</span>
-          {#if isCountingDown}
-            <span class="countdown">{countdown}s</span>
-          {:else}
-            <span class="countdown-idle">{countdown}s</span>
+          {#if transport === "rest"}
+            <button
+              class="url-toggle"
+              onclick={() => showUrl = !showUrl}
+              title={showUrl ? "Hide URL" : "Show URL"}
+            >
+              {showUrl ? "▼" : "▶"} URL
+            </button>
+            <span class="meta-separator">•</span>
           {/if}
+          <div class="transport-toggle" role="group" aria-label="Transport">
+            <button
+              type="button"
+              class="transport-toggle-btn"
+              data-active={transport === "rest"}
+              onclick={() => setTransport("rest")}
+              data-testid="transport-rest"
+            >
+              REST
+            </button>
+            <button
+              type="button"
+              class="transport-toggle-btn"
+              data-active={transport === "grpc"}
+              onclick={() => setTransport("grpc")}
+              data-testid="transport-grpc"
+            >
+              gRPC
+              {#if transport === "grpc"}
+                <span
+                  class="transport-dot {streamConnected ? 'transport-dot-on' : 'transport-dot-off'}"
+                  title={streamConnected ? "Connected" : transportReason || "Connecting..."}
+                ></span>
+              {/if}
+            </button>
+          </div>
+          <span class="meta-separator">•</span>
           <button
-            class="refresh-btn-inline"
-            onclick={refreshMetrics}
-            title="Manual refresh"
+            class="freeze-btn"
+            onclick={toggleFrozen}
+            data-testid="freeze-btn"
+            data-state={frozen ? "frozen" : "running"}
           >
-            🔄
+            {frozen ? `Continue${pendingMetrics.length > 0 ? ` (+${pendingMetrics.length})` : ""}` : "Freeze"}
           </button>
+          {#if transport === "rest"}
+            <span class="meta-separator">•</span>
+            <span class="timestamp-color-{timestampColorIndex}">{lastRefreshTime}</span>
+            <span class="meta-separator">•</span>
+            <label class="refresh-interval">
+              <span>Every</span>
+              <select
+                bind:value={refreshSeconds}
+                onchange={handleRefreshIntervalChange}
+                data-testid="refresh-interval"
+              >
+                {#each REFRESH_OPTIONS as opt}
+                  <option value={opt.value}>{opt.label}</option>
+                {/each}
+              </select>
+            </label>
+            {#if refreshSeconds > 0}
+              {#if isCountingDown}
+                <span class="countdown">{countdown}s</span>
+              {:else}
+                <span class="countdown-idle">{countdown}s</span>
+              {/if}
+            {/if}
+            <button
+              class="refresh-btn-inline"
+              onclick={submitQuery}
+              title="Manual refresh"
+            >
+              🔄
+            </button>
+          {/if}
         </div>
       </div>
-      {#if showUrl}
+      {#if showUrl && transport === "rest"}
         <div class="url-display">
           <code>{obpInfo.baseUrl}/obp/v6.0.0/management/metrics?{currentQueryString}</code>
         </div>
@@ -432,9 +678,6 @@
 
     <div class="panel-content">
       {#if metrics?.metrics && metrics.metrics.length > 0}
-        <div class="metrics-summary">
-          Showing {metrics.count} API calls from {obpInfo.displayName}
-        </div>
         <div class="table-wrapper">
           {#key data.lastUpdated}
             <table class="metrics-table">
@@ -442,9 +685,8 @@
                 <tr>
                   <th>Date</th>
                   <th>User</th>
-                  <th>App</th>
-                  <th>Operation ID</th>
                   <th>Method</th>
+                  <th>Status</th>
                   <th>Duration</th>
                   <th>Correlation ID</th>
                 </tr>
@@ -456,25 +698,7 @@
                       {formatDate(metric.date)}
                     </td>
                     <td class="user-cell">
-                      {metric.user_name || "Anonymous"}
-                    </td>
-                    <td class="app-cell">
-                      {metric.app_name || "Unknown"}
-                    </td>
-                    <td class="operation-id-cell">
-                      {#if getApiExplorerLink(metric)}
-                        <a
-                          href={getApiExplorerLink(metric)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="operation-id-link"
-                          title="View in API Explorer"
-                        >
-                          <code class="operation-id">{getOperationId(metric)}</code>
-                        </a>
-                      {:else}
-                        <code class="operation-id">{getOperationId(metric)}</code>
-                      {/if}
+                      {metric.username || "Anonymous"}
                     </td>
                     <td class="method-cell">
                       <span
@@ -482,6 +706,21 @@
                       >
                         {metric.verb}
                       </span>
+                    </td>
+                    <td class="status-cell">
+                      {#if metric.status_code}
+                        <span
+                          class="status-badge"
+                          class:status-2xx={metric.status_code >= 200 && metric.status_code < 300}
+                          class:status-3xx={metric.status_code >= 300 && metric.status_code < 400}
+                          class:status-4xx={metric.status_code >= 400 && metric.status_code < 500}
+                          class:status-5xx={metric.status_code >= 500}
+                        >
+                          {metric.status_code}
+                        </span>
+                      {:else}
+                        <span class="status-muted">—</span>
+                      {/if}
                     </td>
                     <td class="duration-cell">
                       <span
@@ -501,8 +740,62 @@
                     </td>
                   </tr>
                   <tr class="metric-row-endpoint">
-                    <td colspan="7" class="endpoint-cell-full">
-                      <code class="endpoint-path">{metric.url}</code>
+                    <td colspan="6" class="endpoint-cell-full">
+                      <code
+                        class="api-instance-id"
+                        title={`API Instance ID: ${metric.api_instance_id || "N/A"}`}
+                        >{metric.api_instance_id ? metric.api_instance_id.slice(0, 8) : "N/A"}</code
+                      >
+                      {#if metric.consumer_id}
+                        <a
+                          href="/consumers/{metric.consumer_id}/edit"
+                          title={`Consumer ID: ${metric.consumer_id} — click to open consumer details`}
+                          data-testid="metric-consumer-id-link"
+                          class="consumer-id-link"
+                        >
+                          <code class="consumer-id">{metric.consumer_id.slice(0, 8)}</code>
+                          {#if metric.app_name}
+                            <span class="app-name-inline">{metric.app_name}</span>
+                          {/if}
+                        </a>
+                      {:else}
+                        <code class="consumer-id consumer-id-missing" title="No consumer ID for this call">N/A</code>
+                        {#if metric.app_name}
+                          <span class="app-name-inline app-name-plain">{metric.app_name}</span>
+                        {/if}
+                      {/if}
+                      {#if getApiExplorerLink(metric)}
+                        <a
+                          href={getApiExplorerLink(metric)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="operation-id-link"
+                          title="View in API Explorer"
+                        >
+                          <code class="operation-id">{getOperationId(metric)}</code>
+                        </a>
+                      {:else}
+                        <code class="operation-id">{getOperationId(metric)}</code>
+                      {/if}
+                    </td>
+                  </tr>
+                  <tr class="metric-row-operation">
+                    <td colspan="6" class="endpoint-cell-full">
+                      <span class="endpoint-path">
+                        <code class="endpoint-path-text">{metric.url}</code>
+                        <button
+                          type="button"
+                          class="url-copy-btn"
+                          aria-label="Copy URL"
+                          title="Copy URL"
+                          data-testid="copy-metric-url"
+                          onclick={() => copyToClipboard(metric.url, "URL")}
+                        >
+                          <svg class="url-copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 {/each}
@@ -510,9 +803,23 @@
             </table>
           {/key}
         </div>
-        <div class="metrics-summary">
-          Showing {metrics.count} API calls from
-          {obpInfo.displayName}
+      {:else if hasApiAccess && transport === "grpc"}
+        <div class="empty-state">
+          <div
+            style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; text-align: center;"
+          >
+            🟢
+          </div>
+          <h4
+            style="color: #4a5568; margin-bottom: 0.5rem; font-size: 1.125rem; text-align: center;"
+          >
+            {streamConnected ? "Listening for live metrics…" : "Connecting to gRPC stream…"}
+          </h4>
+          <p style="text-align: center; margin-bottom: 0;">
+            {streamConnected
+              ? "New API calls will appear here as they happen."
+              : transportReason || "Establishing connection to the metrics stream."}
+          </p>
         </div>
       {:else if hasApiAccess}
         <div class="empty-state">
@@ -549,7 +856,7 @@
           </div>
           <button
             class="refresh-btn"
-            onclick={refreshMetrics}
+            onclick={submitQuery}
             style="display: block; margin: 0 auto;"
           >
             🔄 Refresh Data
@@ -592,6 +899,9 @@
 
   .container {
     max-width: 1400px;
+    /* Allow shrinking below intrinsic min-width so the metrics table's
+       min-width: 800px doesn't expand the outer grid track. */
+    min-width: 0;
   }
 
   .alert {
@@ -626,8 +936,14 @@
   }
 
   .full-width-panel {
+    /* overflow-x: clip prevents the metrics table from pushing a page-level
+       horizontal scrollbar. overflow-y: visible lets position:sticky on the
+       header work relative to the viewport. */
+    overflow-x: clip;
+    overflow-y: visible;
     margin-bottom: 1.5rem;
     width: 100%;
+    min-width: 0;
   }
 
   .panel-header {
@@ -657,6 +973,14 @@
     border-color: var(--color-surface-700);
   }
 
+  /* Results panel header stays pinned so Freeze / transport toggle are always reachable. */
+  .full-width-panel > .panel-header-compact {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
   .panel-header-row {
     display: flex;
     align-items: center;
@@ -669,12 +993,149 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
     font-size: 0.875rem;
     color: var(--color-surface-600);
   }
 
   :global([data-mode="dark"]) .panel-meta {
     color: var(--color-surface-400);
+  }
+
+  .header-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    background: transparent;
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    color: var(--color-surface-600);
+    white-space: nowrap;
+  }
+
+  .header-btn:hover {
+    background: var(--color-surface-200);
+    color: var(--color-surface-800);
+  }
+
+  :global([data-mode="dark"]) .header-btn {
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-400);
+  }
+
+  :global([data-mode="dark"]) .header-btn:hover {
+    background: rgb(var(--color-surface-700));
+    color: var(--color-surface-200);
+  }
+
+  .query-btn {
+    background: var(--color-primary-500);
+    color: white;
+    border-color: var(--color-primary-500);
+    font-weight: 600;
+  }
+
+  .query-btn:hover {
+    background: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+    color: white;
+  }
+
+  :global([data-mode="dark"]) .query-btn {
+    background: var(--color-primary-500);
+    color: white;
+    border-color: var(--color-primary-500);
+  }
+
+  :global([data-mode="dark"]) .query-btn:hover {
+    background: var(--color-primary-400);
+    border-color: var(--color-primary-400);
+    color: white;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+
+  .status-dot[data-status="fresh"] {
+    background: #22c55e;
+  }
+
+  .status-dot[data-status="dirty"] {
+    background: #f97316;
+  }
+
+  .header-fields {
+    flex-wrap: wrap;
+  }
+
+  .hf {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    cursor: default;
+  }
+
+  .hf span {
+    color: var(--color-surface-500);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  :global([data-mode="dark"]) .hf span {
+    color: var(--color-surface-400);
+  }
+
+  .hf input,
+  .hf select {
+    padding: 0.2rem 0.3rem;
+    border: 1px solid var(--color-surface-300);
+    border-radius: 0.2rem;
+    font-size: 0.8rem;
+    background: white;
+    color: var(--color-surface-900);
+    line-height: 1.2;
+  }
+
+  :global([data-mode="dark"]) .hf input,
+  :global([data-mode="dark"]) .hf select {
+    background: rgb(var(--color-surface-900));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-100);
+  }
+
+  .hf input:focus,
+  .hf select:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+  }
+
+  .hf input[type="datetime-local"] {
+    width: 11rem;
+  }
+
+  .hf input[type="number"] {
+    width: 3.5rem;
+  }
+
+  .hf-tiny input[type="number"] {
+    width: 3rem;
+  }
+
+  .hf-sm select {
+    width: 4.5rem;
+  }
+
+  .hf-xs select {
+    width: 3.5rem;
   }
 
   .meta-separator {
@@ -724,13 +1185,37 @@
   }
 
   .url-display code {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     color: var(--color-surface-700);
     word-break: break-all;
   }
 
   :global([data-mode="dark"]) .url-display code {
     color: var(--color-surface-300);
+  }
+
+  .refresh-interval {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .refresh-interval select {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  :global([data-mode="dark"]) .refresh-interval select {
+    background: rgb(var(--color-surface-700));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-200);
   }
 
   .refresh-btn-inline {
@@ -746,6 +1231,108 @@
     transform: rotate(180deg);
   }
 
+  .freeze-btn {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+  }
+
+  .freeze-btn:hover {
+    background: #f9fafb;
+  }
+
+  .freeze-btn[data-state="frozen"] {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+
+  :global([data-mode="dark"]) .freeze-btn {
+    background: rgb(var(--color-surface-700));
+    border-color: rgb(var(--color-surface-600));
+    color: var(--color-surface-200);
+  }
+
+  :global([data-mode="dark"]) .freeze-btn[data-state="frozen"] {
+    background: rgba(251, 191, 36, 0.2);
+    color: rgb(253, 224, 71);
+    border-color: rgba(251, 191, 36, 0.4);
+  }
+
+  .transport-toggle {
+    display: inline-flex;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  :global([data-mode="dark"]) .transport-toggle {
+    border-color: rgb(var(--color-surface-600));
+  }
+
+  .transport-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: white;
+    color: #6b7280;
+    border: none;
+    cursor: pointer;
+  }
+
+  .transport-toggle-btn + .transport-toggle-btn {
+    border-left: 1px solid #d1d5db;
+  }
+
+  :global([data-mode="dark"]) .transport-toggle-btn {
+    background: rgb(var(--color-surface-700));
+    color: var(--color-surface-300);
+  }
+
+  :global([data-mode="dark"]) .transport-toggle-btn + .transport-toggle-btn {
+    border-left-color: rgb(var(--color-surface-600));
+  }
+
+  .transport-toggle-btn[data-active="true"] {
+    background: #3b82f6;
+    color: white;
+  }
+
+  :global([data-mode="dark"]) .transport-toggle-btn[data-active="true"] {
+    background: rgb(var(--color-primary-600));
+  }
+
+  .transport-toggle-btn:hover:not([data-active="true"]) {
+    background: #f9fafb;
+  }
+
+  :global([data-mode="dark"]) .transport-toggle-btn:hover:not([data-active="true"]) {
+    background: rgb(var(--color-surface-600));
+  }
+
+  .transport-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+  }
+
+  .transport-dot-on {
+    background: #22c55e;
+  }
+
+  .transport-dot-off {
+    background: #f59e0b;
+  }
+
   .panel-title {
     font-size: 1.25rem;
     font-weight: 600;
@@ -755,6 +1342,16 @@
 
   :global([data-mode="dark"]) .panel-title {
     color: var(--color-surface-100);
+  }
+
+  .panel-title-count {
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--color-surface-500);
+  }
+
+  :global([data-mode="dark"]) .panel-title-count {
+    color: var(--color-surface-400);
   }
 
   .panel-subtitle {
@@ -832,7 +1429,47 @@
     border-color: var(--color-surface-800);
   }
 
-  /* Row hover is handled by .metric-row-main:hover styles */
+  .metric-row-main td {
+    border-bottom: none;
+  }
+
+  .metric-row-endpoint,
+  .metric-row-operation {
+    background: var(--color-surface-50);
+  }
+
+  :global([data-mode="dark"]) .metric-row-endpoint,
+  :global([data-mode="dark"]) .metric-row-operation {
+    background: var(--color-surface-900);
+  }
+
+  .metric-row-endpoint td {
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: none;
+  }
+
+  .metric-row-operation td {
+    padding-top: 0.375rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-surface-300);
+  }
+
+  :global([data-mode="dark"]) .metric-row-operation td {
+    border-color: var(--color-surface-700);
+  }
+
+  .metric-row-main:hover,
+  .metric-row-main:hover + .metric-row-endpoint,
+  .metric-row-main:hover + .metric-row-endpoint + .metric-row-operation {
+    background: var(--color-surface-100);
+  }
+
+  :global([data-mode="dark"]) .metric-row-main:hover,
+  :global([data-mode="dark"]) .metric-row-main:hover + .metric-row-endpoint,
+  :global([data-mode="dark"]) .metric-row-main:hover + .metric-row-endpoint + .metric-row-operation {
+    background: var(--color-surface-800);
+  }
 
   .date-cell {
     font-family: monospace;
@@ -846,37 +1483,6 @@
     color: var(--color-surface-400);
   }
 
-  .metric-row-main td {
-    border-bottom: none;
-  }
-
-  .metric-row-endpoint {
-    background: var(--color-surface-50);
-  }
-
-  :global([data-mode="dark"]) .metric-row-endpoint {
-    background: var(--color-surface-900);
-  }
-
-  .metric-row-endpoint td {
-    padding-top: 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-surface-300);
-  }
-
-  :global([data-mode="dark"]) .metric-row-endpoint td {
-    border-color: var(--color-surface-700);
-  }
-
-  .metric-row-main:hover,
-  .metric-row-main:hover + .metric-row-endpoint {
-    background: var(--color-surface-100);
-  }
-
-  :global([data-mode="dark"]) .metric-row-main:hover,
-  :global([data-mode="dark"]) .metric-row-main:hover + .metric-row-endpoint {
-    background: var(--color-surface-800);
-  }
 
   .endpoint-cell-full {
     font-family: monospace;
@@ -889,19 +1495,69 @@
     padding: 0.25rem 0.5rem;
     border-radius: 3px;
     font-size: 0.75rem;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 
   :global([data-mode="dark"]) .endpoint-path {
     background: var(--color-surface-800);
   }
 
-  .user-cell,
-  .app-cell {
+  .url-copy-btn {
+    padding: 0.125rem;
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--color-surface-500);
+    line-height: 0;
+  }
+
+  .url-copy-btn:hover {
+    background: var(--color-surface-300);
+    color: var(--color-surface-800);
+  }
+
+  :global([data-mode="dark"]) .url-copy-btn {
+    color: var(--color-surface-400);
+  }
+
+  :global([data-mode="dark"]) .url-copy-btn:hover {
+    background: var(--color-surface-700);
+    color: var(--color-surface-200);
+  }
+
+  .url-copy-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .user-cell {
     max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .app-name-inline {
+    margin-right: 0.5rem;
+    color: #9d174d;
+    font-weight: 500;
+    font-family: system-ui, sans-serif;
+    font-size: 0.8125rem;
+  }
+
+  :global([data-mode="dark"]) .app-name-inline {
+    color: rgb(249, 168, 212);
+  }
+
+  .consumer-id-link:hover .app-name-inline {
+    text-decoration: underline;
+  }
+
+  .app-name-plain {
+    opacity: 0.7;
   }
 
   .operation-id-cell {
@@ -971,6 +1627,63 @@
     background-color: var(--color-secondary-500);
   }
 
+  .status-cell {
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .status-badge.status-2xx {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .status-badge.status-3xx {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .status-badge.status-4xx {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .status-badge.status-5xx {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-2xx {
+    background: rgba(16, 185, 129, 0.2);
+    color: rgb(110, 231, 183);
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-3xx {
+    background: rgba(59, 130, 246, 0.2);
+    color: rgb(147, 197, 253);
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-4xx {
+    background: rgba(251, 191, 36, 0.2);
+    color: rgb(253, 224, 71);
+  }
+
+  :global([data-mode="dark"]) .status-badge.status-5xx {
+    background: rgba(239, 68, 68, 0.2);
+    color: rgb(252, 165, 165);
+  }
+
+  .status-muted {
+    color: #9ca3af;
+  }
+
   .duration-cell {
     text-align: right;
     white-space: nowrap;
@@ -1035,6 +1748,55 @@
   :global([data-mode="dark"]) .correlation-id {
     background: var(--color-tertiary-900);
     color: var(--color-tertiary-200);
+  }
+
+  .api-instance-id {
+    margin-right: 0.5rem;
+    background: var(--color-primary-100);
+    color: var(--color-primary-800);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: help;
+  }
+
+  :global([data-mode="dark"]) .api-instance-id {
+    background: var(--color-primary-900);
+    color: var(--color-primary-200);
+  }
+
+  .consumer-id {
+    margin-right: 0.5rem;
+    background: #fce7f3;
+    color: #9d174d;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: help;
+  }
+
+  :global([data-mode="dark"]) .consumer-id {
+    background: rgba(236, 72, 153, 0.18);
+    color: rgb(249, 168, 212);
+  }
+
+  .consumer-id-link {
+    text-decoration: none;
+  }
+
+  .consumer-id-link:hover .consumer-id {
+    background: #fbcfe8;
+    text-decoration: underline;
+  }
+
+  :global([data-mode="dark"]) .consumer-id-link:hover .consumer-id {
+    background: rgba(236, 72, 153, 0.3);
+  }
+
+  .consumer-id-missing {
+    opacity: 0.6;
   }
 
   .table-wrapper {

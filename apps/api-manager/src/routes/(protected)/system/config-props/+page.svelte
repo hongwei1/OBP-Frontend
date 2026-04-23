@@ -44,14 +44,14 @@
     isLoading = true;
 
     try {
-      const response = await trackedFetch(`/api/system/config-props`);
+      const response = await trackedFetch(`/proxy/obp/v6.0.0/management/config-props`);
       const responseData = await response.json();
 
       rawResponse = responseData;
 
-      if (responseData.error) {
-        loadError = responseData.error;
-        loadErrorCode = responseData.obpErrorCode || "";
+      if (responseData.message) {
+        loadError = responseData.message;
+        loadErrorCode = responseData.code || "";
         configProps = [];
       } else {
         loadError = "";

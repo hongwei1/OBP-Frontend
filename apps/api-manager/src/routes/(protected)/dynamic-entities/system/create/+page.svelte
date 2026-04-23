@@ -150,8 +150,8 @@
       };
 
       const createUrl = entityLevel === "bank"
-        ? `/api/dynamic-entities/bank/${bankId}/create`
-        : `/api/dynamic-entities/system/create`;
+        ? `/proxy/obp/v6.0.0/management/banks/${bankId}/dynamic-entities`
+        : `/proxy/obp/v6.0.0/management/system-dynamic-entities`;
 
       const response = await fetch(createUrl, {
         method: "POST",

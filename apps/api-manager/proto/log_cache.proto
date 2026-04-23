@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package code.obp.grpc.logcache.g1;
+
+import "google/protobuf/timestamp.proto";
+
+service LogCacheStreamService {
+  rpc StreamLogCacheEntries (StreamLogCacheRequest) returns (stream LogCacheEntry);
+}
+
+message StreamLogCacheRequest {
+  LogLevel level = 1;
+}
+
+message LogCacheEntry {
+  LogLevel level = 1;
+  string message = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string api_instance_id = 4;
+}
+
+enum LogLevel {
+  LOG_LEVEL_UNSPECIFIED = 0;
+  TRACE = 1;
+  DEBUG = 2;
+  INFO = 3;
+  WARNING = 4;
+  ERROR = 5;
+  ALL = 6;
+}

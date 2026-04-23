@@ -25,16 +25,26 @@ export function extractErrorDetails(err: unknown): {
   }
 
   if (err && typeof err === "object") {
-    // Try to extract message from object
-    const message =
-      (err as any).message ||
-      (err as any).error ||
-      (err as any).error_message ||
-      JSON.stringify(err);
-    return { message };
+    if ((err as any).message) {
+      return { message: (err as any).message };
+    }
+    return { message: JSON.stringify(err) };
   }
 
   return { message: String(err) };
+}
+
+/**
+ * Build a JSON error response matching the OBP API ErrorMessage format:
+ * { message: string, code: number } where code is the HTTP status code.
+ */
+export function obpErrorResponse(err: unknown, fallbackStatus: number = 500) {
+  const { message } = extractErrorDetails(err);
+  const status = (err as any)?.statusCode || fallbackStatus;
+  return {
+    body: { message, code: status },
+    status: status as number,
+  };
 }
 
 export class OBPErrorBase extends Error {

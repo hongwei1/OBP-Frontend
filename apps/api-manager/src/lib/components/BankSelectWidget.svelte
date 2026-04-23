@@ -45,7 +45,7 @@
     error = "";
 
     try {
-      const response = await trackedFetch("/api/banks");
+      const response = await trackedFetch("/proxy/obp/v6.0.0/banks");
 
       if (!response.ok) {
         const errorDetails = await extractErrorFromResponse(

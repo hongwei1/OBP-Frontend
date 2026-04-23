@@ -73,7 +73,7 @@
     isSubmitting = true;
 
     try {
-      const response = await trackedFetch("/api/rbac/memberships", {
+      const response = await trackedFetch("/backend/rbac/memberships", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +86,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create membership");
+        throw new Error(errorData.message);
       }
 
       const responseData = await response.json();

@@ -92,7 +92,7 @@
     setFormError("");
 
     try {
-      const response = await trackedFetch("/api/rbac/entitlements", {
+      const response = await trackedFetch("/backend/rbac/entitlements", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

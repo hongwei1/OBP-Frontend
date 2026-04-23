@@ -82,7 +82,7 @@
 
       // Check if collection already exists by name (handles OBP soft-delete / uniqueness)
       const existingRes = await trackedFetch(
-        `/api/api-collections/name/${encodeURIComponent(collection.collection_name)}`,
+        `/proxy/obp/v6.0.0/my/api-collections/name/${encodeURIComponent(collection.collection_name)}`,
       );
 
       if (existingRes.ok) {
@@ -91,7 +91,7 @@
         collectionIds[collection.collection_name] = collectionId;
       } else {
         // Collection doesn't exist — create it
-        const res = await trackedFetch("/api/api-collections", {
+        const res = await trackedFetch("/backend/api-collections", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -116,7 +116,7 @@
       for (const ep of collection.endpoints) {
         try {
           const epRes = await trackedFetch(
-            `/api/api-collections/${collectionId}/endpoints`,
+            `/backend/api-collections/${collectionId}/endpoints`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -167,7 +167,7 @@
       // Create product via PUT with all core fields
       const collectionId = collectionIds[collection.collection_name] || "";
       const res = await trackedFetch(
-        `/api/products/${selectedBankId}/${product.product_code}`,
+        `/proxy/obp/v6.0.0/banks/${selectedBankId}/api-products/${product.product_code}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -243,7 +243,7 @@
         if (productStatus[product.id] !== "deleting") continue;
         try {
           const res = await trackedFetch(
-            `/api/products/${selectedBankId}/${product.product_code}`,
+            `/proxy/obp/v6.0.0/banks/${selectedBankId}/api-products/${product.product_code}`,
             { method: "DELETE" },
           );
           if (!res.ok) {
@@ -270,7 +270,7 @@
     if (collectionId) {
       try {
         const res = await trackedFetch(
-          `/api/api-collections/${collectionId}`,
+          `/backend/api-collections/${collectionId}`,
           { method: "DELETE" },
         );
         if (!res.ok) {

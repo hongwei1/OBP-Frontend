@@ -33,7 +33,7 @@
       };
 
       const response = await trackedFetch(
-        `/api/featured-collections/${featured.api_collection_id}`,
+        `/backend/featured-collections/${featured.api_collection_id}`,
         {
           method: "PUT",
           headers: {
@@ -45,7 +45,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update sort order");
+        throw new Error(errorData.message);
       }
 
       toast.success("Sort Order Updated", "Featured collection sort order updated");

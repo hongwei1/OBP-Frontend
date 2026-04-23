@@ -96,7 +96,7 @@
       };
 
       // Call the execute API endpoint
-      const response = await fetch(`/api/abac-rules/${data.ruleId}/execute`, {
+      const response = await fetch(`/backend/abac-rules/${data.ruleId}/execute`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,7 +106,7 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to execute ABAC rule");
+        throw new Error(errorData.message);
       }
 
       const result = await response.json();

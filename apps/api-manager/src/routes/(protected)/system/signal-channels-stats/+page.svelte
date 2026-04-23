@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
+
+  const AUTO_REFRESH_INTERVAL = 15_000;
+  const AUTO_REFRESH_SECONDS = AUTO_REFRESH_INTERVAL / 1000;
+  let autoRefreshTimer: ReturnType<typeof setInterval>;
+  let countdownTimer: ReturnType<typeof setInterval>;
+  let secondsUntilRefresh = $state(AUTO_REFRESH_SECONDS);
 
   interface ChannelStat {
     channel_name: string;
@@ -32,12 +38,13 @@
     try {
       isLoading = true;
       error = null;
+      secondsUntilRefresh = AUTO_REFRESH_SECONDS;
 
-      const response = await fetch("/api/signal/channels/stats");
+      const response = await fetch("/proxy/obp/v6.0.0/signal/channels/stats");
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || response.statusText;
+        const errorMsg = errorData.message;
         throw new Error(
           `Failed to fetch signal stats (${response.status}): ${errorMsg}`,
         );
@@ -45,8 +52,8 @@
 
       const data = await response.json();
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (data.message) {
+        throw new Error(data.message);
       }
 
       stats = data;
@@ -75,6 +82,20 @@
 
   onMount(() => {
     fetchStats();
+    autoRefreshTimer = setInterval(() => {
+      if (!isLoading) {
+        fetchStats();
+        secondsUntilRefresh = AUTO_REFRESH_SECONDS;
+      }
+    }, AUTO_REFRESH_INTERVAL);
+    countdownTimer = setInterval(() => {
+      if (secondsUntilRefresh > 0) secondsUntilRefresh--;
+    }, 1000);
+  });
+
+  onDestroy(() => {
+    clearInterval(autoRefreshTimer);
+    clearInterval(countdownTimer);
   });
 </script>
 
@@ -119,6 +140,7 @@
           {#if lastUpdated}
             <div class="last-updated">
               Last updated: <span class="timestamp">{lastUpdated}</span>
+              — next refresh in {String(secondsUntilRefresh).padStart(2, "0")}s
             </div>
           {/if}
         </div>

@@ -99,3 +99,33 @@ export interface OBPWebUIPropRequestBody {
   name: string;
   value: string;
 }
+
+export interface OBPChatRoom {
+  chat_room_id: string;
+  bank_id: string;
+  name: string;
+  description: string;
+  joining_key: string;
+  created_by: string;
+  created_by_username: string;
+  created_by_provider: string;
+  is_open_room: boolean;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OBPChatRoomParticipant {
+  participant_id: string;
+  chat_room_id: string;
+  user_id: string;
+  username: string;
+  provider: string;
+  consumer_id: string;
+  consumer_name: string;
+  permissions: string[];
+  webhook_url: string;
+  joined_at: string;
+  last_read_at: string;
+  is_muted: boolean;
+}
