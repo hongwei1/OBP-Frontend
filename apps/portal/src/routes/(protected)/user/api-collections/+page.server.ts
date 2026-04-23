@@ -48,12 +48,12 @@ export const actions = {
 		const is_sharable = data.get('is_sharable') === 'true';
 
 		if (!name) {
-			return fail(400, { error: 'Collection name is required.' });
+			return fail(400, { message: 'Collection name is required.' });
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return fail(401, { error: 'No access token found in session.' });
+			return fail(401, { message: 'No access token found in session.' });
 		}
 
 		const requestBody = {
@@ -73,7 +73,7 @@ export const actions = {
 			} else if (err instanceof Error) {
 				errorMessage = err.message;
 			}
-			return fail(500, { error: errorMessage });
+			return fail(500, { message: errorMessage });
 		}
 	},
 
@@ -82,12 +82,12 @@ export const actions = {
 		const collectionId = data.get('api_collection_id');
 
 		if (!collectionId) {
-			return fail(400, { error: 'Collection ID is required.' });
+			return fail(400, { message: 'Collection ID is required.' });
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return fail(401, { error: 'No access token found in session.' });
+			return fail(401, { message: 'No access token found in session.' });
 		}
 
 		try {
@@ -101,7 +101,7 @@ export const actions = {
 			} else if (err instanceof Error) {
 				errorMessage = err.message;
 			}
-			return fail(500, { error: errorMessage });
+			return fail(500, { message: errorMessage });
 		}
 	}
 } satisfies Actions;

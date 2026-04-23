@@ -31,7 +31,7 @@ export async function load(event: RequestEvent) {
 		await obp_requests.get(`/obp/${API_VERSION}/root`);
 	} catch (e) {
 		logger.error('OBP-API is not responding:', e);
-		return { endpoints: [], error: 'OBP-API is not responding. Please check that the API server is running.', apiExplorerUrl };
+		return { endpoints: [], message: 'OBP-API is not responding. Please check that the API server is running.', apiExplorerUrl };
 	}
 
 	// Fetch featured collections (public endpoint)
@@ -50,7 +50,7 @@ export async function load(event: RequestEvent) {
 			errorMsg = String(e);
 		}
 		logger.error('Error fetching featured API collections:', errorMsg);
-		return { endpoints: [], error: errorMsg, apiExplorerUrl };
+		return { endpoints: [], message: errorMsg, apiExplorerUrl };
 	}
 
 	if (!collectionsResponse?.api_collections?.length) {

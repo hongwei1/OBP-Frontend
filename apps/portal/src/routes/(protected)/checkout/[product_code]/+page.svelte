@@ -42,9 +42,9 @@
 	{/if}
 
 	<!-- Error Message -->
-	{#if form?.error}
+	{#if form?.message}
 		<div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-			<p class="text-red-600 dark:text-red-400 font-semibold">{form.error}</p>
+			<p class="text-red-600 dark:text-red-400 font-semibold">{form.message}</p>
 		</div>
 	{/if}
 

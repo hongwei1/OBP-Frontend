@@ -83,7 +83,7 @@ export const actions = {
         const currentUserId = locals.session.data.user?.user_id
         if (!token || !currentUserId) {
             return {
-                error: "No access token or user_id not found in session."
+                message: "No access token or user_id not found in session."
             };
         }
         // Make request to OBP to add the entitlement
@@ -115,7 +115,7 @@ export const actions = {
             } else if (err instanceof Error) {
                 errorMessage = err.message;
             }
-            return fail(500, {entitlement: entitlement, error: errorMessage, ...(bank_id ? { bank_id: bank_id } : {})});
+            return fail(500, {entitlement: entitlement, message: errorMessage, ...(bank_id ? { bank_id: bank_id } : {})});
         }
     }
 } satisfies Actions

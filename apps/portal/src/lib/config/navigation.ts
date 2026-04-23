@@ -1,4 +1,4 @@
-import { User, ShieldUser, KeyRound, IdCardLanyard, CreditCard, Database, FolderKanban, UserPlus, LayoutList, FileText, HandCoins, FileCheck, ArrowRightLeft, ScanEye } from '@lucide/svelte';
+import { User, ShieldUser, KeyRound, IdCardLanyard, CreditCard, Database, FolderKanban, UserPlus, LayoutList, FileText, HandCoins, FileCheck, ArrowRightLeft, ScanEye, Code, Rocket, BookOpen, KeySquare, LogIn, ShieldCheck, Bot, Cpu, Workflow, SendHorizontal, Compass, ScrollText, Repeat, Eye, Wallet, AppWindow, Package, MessageSquare } from '@lucide/svelte';
 import { env } from '$env/dynamic/public';
 
 export interface NavigationItem {
@@ -14,11 +14,12 @@ function buildMyAccountItems(): NavigationItem[] {
     const items: NavigationItem[] = [
         { href: '/user', label: 'Profile', iconComponent: User },
         { href: '/user/consents', label: 'Consents', iconComponent: ShieldUser },
-        { href: '/user/consumers', label: 'Consumers', iconComponent: KeyRound },
+        { href: '/user/consumers', label: 'Consumers (Applications)', iconComponent: KeyRound },
         { href: '/user/entitlements', label: 'Entitlements', iconComponent: IdCardLanyard },
         { href: '/user/my-data', label: 'My Data', iconComponent: Database, description: 'View my own data.' },
         { href: '/user/personal-data-fields', label: 'Personal Data Fields', iconComponent: FileText, description: 'Manage your personal attributes.' },
-        { href: '/user/api-collections', label: 'My API Collections', iconComponent: FolderKanban, description: 'Manage your API endpoint collections.' }
+        { href: '/user/api-collections', label: 'My API Collections', iconComponent: FolderKanban, description: 'Manage your API endpoint collections.' },
+        { href: '/user/chat', label: 'Chat', iconComponent: MessageSquare, description: 'Chat rooms and messaging.' }
     ];
 
     // Only add Subscriptions link if PUBLIC_SUBSCRIPTIONS_URL is set
@@ -47,6 +48,28 @@ export const earlyAccessItems: NavigationItem[] = [
     { href: '/confirm-bg-consent-request-redirect-uri', label: 'BG Consent Redirect', iconComponent: ArrowRightLeft, description: 'Berlin Group consent redirect after confirmation.' },
     { href: '/consent-screen', label: 'Consent Screen', iconComponent: ScanEye, description: 'OAuth consent screen.' },
 ];
+
+export const developerItems: NavigationItem[] = [
+    { href: '/developers/getting-started', label: 'Getting Started', iconComponent: Rocket, description: 'Get up and running with the OBP API.' },
+    { href: '/developers/obp-concepts', label: 'OBP Concepts', iconComponent: BookOpen, description: 'Core concepts behind the Open Bank Project API.' },
+    { href: '/developers/consumer-creation', label: 'Consumer Creation', iconComponent: KeySquare, description: 'Register an app and get your API key.' },
+    { href: '/developers/direct-login', label: 'Direct Login', iconComponent: LogIn, description: 'Authenticate directly with username and password.' },
+    { href: '/developers/oauth2-oidc', label: 'OAuth2 / OIDC', iconComponent: ShieldCheck, description: 'OAuth2 and OpenID Connect authentication flows.' },
+    { href: '/developers/application-access', label: 'Application Access', iconComponent: AppWindow, description: 'Client Credentials and Consumer authentication.' },
+    { href: '/developers/account-access', label: 'Account Access', iconComponent: Eye, description: 'How account access and Views work in OBP.' },
+    { href: '/developers/access-to-accounts', label: 'Access to Accounts', iconComponent: Wallet, description: 'List, view, and work with bank accounts via the API.' },
+    { href: '/developers/consents', label: 'Consents', iconComponent: ScrollText, description: 'Account access consents for third-party applications.' },
+    { href: '/developers/variable-recurring-payments', label: 'Variable Recurring Payments', iconComponent: Repeat, description: 'VRP consents for recurring payments within agreed limits.' },
+    { href: '/developers/transaction-requests', label: 'Transaction Requests', iconComponent: SendHorizontal, description: 'Make payments using Transaction Requests.' },
+    { href: '/developers/api-explorer', label: 'API Explorer', iconComponent: Compass, description: 'Browse and test all OBP API endpoints.' },
+    { href: '/developers/opey', label: 'Opey', iconComponent: Bot, description: 'The OBP AI assistant for exploring the API.' },
+    { href: '/developers/agents-and-mcp', label: 'Agents and MCP', iconComponent: Workflow, description: 'Use AI agents and the Model Context Protocol with OBP.' },
+    { href: '/developers/sdks', label: 'SDKs', iconComponent: Package, description: 'Client SDKs for the OBP API in multiple programming languages.' },
+];
+
+export function getActiveDeveloperItem(pathname: string) {
+    return developerItems.find(item => pathname.startsWith(item.href)) || developerItems[0];
+}
 
 export function getActiveMenuItem(pathname: string) {
     const found = myAccountItems.find(item => {

@@ -2,6 +2,7 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { obp_requests } from "$lib/obp/requests";
 import { createLogger } from "@obp/shared/utils";
+import { obpErrorResponse } from "@obp/shared/obp";
 
 const logger = createLogger("BanksAPI");
 
@@ -9,7 +10,7 @@ export const GET: RequestHandler = async ({ locals }) => {
   const session = locals.session;
 
   if (!session?.data?.user) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return json({ message: "Unauthorized", code: 401 }, { status: 401 });
   }
 
   try {
@@ -25,16 +26,10 @@ export const GET: RequestHandler = async ({ locals }) => {
       banks,
       count: banks.length,
     });
-  } catch (error: any) {
-    logger.error("Error fetching banks:", error);
+  } catch (err: unknown) {
+    logger.error("Error fetching banks:", err);
 
-    return json(
-      {
-        banks: [],
-        count: 0,
-        error: error.message || "Internal Server Error",
-      },
-      { status: 500 },
-    );
+    const { body, status } = obpErrorResponse(err);
+    return json(body, { status });
   }
 };

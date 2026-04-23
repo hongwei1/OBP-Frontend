@@ -23,13 +23,13 @@
     }
 
     function formatJwtExpiration(): { formatted: string; isExpired: boolean } {
-        if (!consent.jwt_payload?.exp) {
+        if (!consent.jwt_expires_at) {
             return { formatted: 'Not available', isExpired: true };
         }
-        
-        const expDate = new Date(consent.jwt_payload.exp * 1000);
+
+        const expDate = new Date(consent.jwt_expires_at);
         const isExpired = expDate < new Date();
-        
+
         return {
             formatted: expDate.toLocaleDateString(undefined, {
                 year: 'numeric',

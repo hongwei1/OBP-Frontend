@@ -3,12 +3,16 @@ const logger = createLogger('OAuthSessionHelper');
 import { oauth2ProviderFactory } from './providerFactory';
 import type { OAuth2ClientWithConfig } from './client';
 import type { Session } from 'svelte-kit-sessions';
+import type { SessionOAuthStorageData } from './types';
+
+
 
 export interface SessionOAuthData {
 	client: OAuth2ClientWithConfig;
 	provider: string;
 	accessToken: string;
 	refreshToken?: string;
+	idToken?: string;
 }
 
 export class SessionOAuthHelper {
@@ -18,7 +22,7 @@ export class SessionOAuthHelper {
 	 * @returns SessionOAuthData if valid, null if invalid/missing
 	 */
 	static getSessionOAuth(session: Session): SessionOAuthData | null {
-		const oauthData = session.data.oauth;
+		const oauthData = session.data.oauth as SessionOAuthStorageData;
 		if (!oauthData?.provider || !oauthData?.access_token) {
 			return null;
 		}
@@ -32,16 +36,18 @@ export class SessionOAuthHelper {
 			client,
 			provider: oauthData.provider,
 			accessToken: oauthData.access_token,
-			refreshToken: oauthData.refresh_token
+			refreshToken: oauthData.refresh_token,
+			idToken: oauthData.id_token
 		};
 	}
 
 	static async updateTokensInSession(
 		session: Session,
 		accessToken: string,
-		refreshToken?: string
+		refreshToken?: string,
+		idToken?: string
 	): Promise<void> {
-		const currentOauth = session.data.oauth;
+		const currentOauth = session.data.oauth as SessionOAuthStorageData;
 		if (!currentOauth) {
 			throw new Error('No OAuth data in session to update.');
 		}
@@ -51,8 +57,9 @@ export class SessionOAuthHelper {
 			oauth: {
 				...currentOauth,
 				access_token: accessToken,
-				refresh_token: refreshToken || currentOauth.refresh_token // Keep existing refresh token if not provided
-			}
+				refresh_token: refreshToken || currentOauth.refresh_token, // Keep existing refresh token if not provided
+				id_token: idToken || currentOauth.id_token // Keep existing ID token if not provided
+			} as SessionOAuthStorageData
 		});
 
 		await session.save();
@@ -82,7 +89,8 @@ export class SessionOAuthHelper {
 			await this.updateTokensInSession(
 				session,
 				tokens.accessToken(),
-				tokens.refreshToken() || refreshToken
+				tokens.refreshToken() || refreshToken,
+				tokens.idToken()
 			);
 
 			logger.info(`Access token refreshed successfully for provider: ${provider}`);

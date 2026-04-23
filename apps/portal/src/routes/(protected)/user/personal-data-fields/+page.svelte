@@ -1,11 +1,23 @@
 <script lang="ts">
 	import type { OBPPersonalDataField } from '$lib/obp/types';
 
+	type FormFail = {
+		action?: string;
+		success?: boolean;
+		message?: string;
+		editId?: string;
+		name?: string;
+		type?: string;
+		value?: string;
+	};
+
 	const { data, form } = $props();
+	const initialForm = form as FormFail | null | undefined;
+	const formFail = $derived(form as FormFail | null | undefined);
 
 	const typeOptions: OBPPersonalDataField['type'][] = ['STRING', 'INTEGER', 'DOUBLE', 'DATE_WITH_DAY'];
 
-	let editingId = $state<string | null>(form?.editId ?? null);
+	let editingId = $state<string | null>(initialForm?.editId ?? null);
 	let editName = $state('');
 	let editType = $state<OBPPersonalDataField['type']>('STRING');
 	let editValue = $state('');
@@ -60,9 +72,9 @@
 	</div>
 {/if}
 
-{#if form?.error && form?.action !== 'create'}
+{#if form?.message && form?.action !== 'create'}
 	<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-		<p class="text-sm text-red-800 dark:text-red-200">{form.error}</p>
+		<p class="text-sm text-red-800 dark:text-red-200">{form.message}</p>
 	</div>
 {/if}
 
@@ -160,9 +172,9 @@
 
 <h2 class="mt-8 mb-4 text-xl font-semibold">Add New Field</h2>
 
-{#if form?.error && form?.action === 'create'}
+{#if form?.message && form?.action === 'create'}
 	<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-		<p class="text-sm text-red-800 dark:text-red-200">{form.error}</p>
+		<p class="text-sm text-red-800 dark:text-red-200">{form.message}</p>
 	</div>
 {/if}
 
@@ -174,14 +186,14 @@
 			type="text"
 			name="name"
 			placeholder="e.g. favorite_color"
-			value={form?.action === 'create' && !form?.success ? (form?.name ?? '') : ''}
+			value={formFail?.action === 'create' && !formFail?.success ? (formFail?.name ?? '') : ''}
 			required
 		/>
 	</label>
 
 	<label class="label">
 		<span class="label-text">Type</span>
-		<select class="select" name="type" value={form?.action === 'create' && !form?.success ? (form?.type ?? 'STRING') : 'STRING'}>
+		<select class="select" name="type" value={formFail?.action === 'create' && !formFail?.success ? (formFail?.type ?? 'STRING') : 'STRING'}>
 			{#each typeOptions as t}
 				<option value={t}>{t}</option>
 			{/each}
@@ -195,7 +207,7 @@
 			type="text"
 			name="value"
 			placeholder="e.g. blue"
-			value={form?.action === 'create' && !form?.success ? (form?.value ?? '') : ''}
+			value={formFail?.action === 'create' && !formFail?.success ? (formFail?.value ?? '') : ''}
 			required
 		/>
 	</label>

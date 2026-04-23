@@ -25,6 +25,8 @@ const displayConsent = (consent: OBPConsent): boolean => {
 	return timeDifference <= 24 * 60 * 60 * 1000;
 };
 
+const VALID_STATUSES = ['INITIATED', 'ACCEPTED', 'REJECTED', 'REVOKED'] as const;
+
 export async function load(event: RequestEvent) {
 	const token = event.locals.session.data.oauth?.access_token;
 	if (!token) {
@@ -33,10 +35,18 @@ export async function load(event: RequestEvent) {
 		});
 	}
 
+	const statusParam = event.url.searchParams.get('status');
+	const status = statusParam && VALID_STATUSES.includes(statusParam as any) ? statusParam : null;
+
+	let endpoint = '/obp/v5.1.0/my/consents?limit=10&sort_by=created_date:desc';
+	if (status) {
+		endpoint += `&status=${status}`;
+	}
+
 	let consentResponse: { consents: OBPConsent[] } | undefined = undefined;
 
 	try {
-		consentResponse = await obp_requests.get('/obp/v5.1.0/my/consents', token);
+		consentResponse = await obp_requests.get(endpoint, token);
 	} catch (e) {
 		logger.error('Error fetching consents:', e);
 		error(500, {
@@ -61,11 +71,11 @@ export async function load(event: RequestEvent) {
 	}
 
 	// Split consents into Opey and Other consents
-	const opeyConsents = consents.filter((consent: OBPConsent) => 
+	const opeyConsents = consents.filter((consent: OBPConsent) =>
 		consent.consumer_id === env.OPEY_CONSUMER_ID
 	);
-	
-	const otherConsents = consents.filter((consent: OBPConsent) => 
+
+	const otherConsents = consents.filter((consent: OBPConsent) =>
 		consent.consumer_id !== env.OPEY_CONSUMER_ID
 	);
 
@@ -81,7 +91,8 @@ export async function load(event: RequestEvent) {
 
 	return {
 		opeyConsents,
-		otherConsents
+		otherConsents,
+		activeStatus: status
 	};
 }
 
@@ -92,7 +103,7 @@ export const actions = {
 
 		if (!consentId) {
 			return {
-				error: 'Consent ID is required.'
+				message: 'Consent ID is required.'
 			};
 		}
 
@@ -101,7 +112,7 @@ export const actions = {
 
 		if (!token) {
 			return {
-				error: 'No access token found in session.'
+				message: 'No access token found in session.'
 			};
 		}
 
@@ -117,7 +128,7 @@ export const actions = {
 				errorMessage = err.message;
 			}
 			return {
-				error: errorMessage
+				message: errorMessage
 			};
 		}
 

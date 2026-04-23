@@ -20,6 +20,7 @@ export interface OBPConsent {
     last_usage_date: string;
     everything?: boolean;
     jwt: string;
+    jwt_expires_at?: string;
     jwt_payload: {
         createdByUserId: string;
         sub: string;
@@ -77,6 +78,7 @@ export interface OBPConsumerRequestBody {
     developer_email: string,
     description: string,
     company: string
+    client_certificate?: string
     enabled: boolean
 }
 

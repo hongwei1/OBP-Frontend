@@ -1,0 +1,154 @@
+import { createLogger } from '@obp/shared/utils';
+const logger = createLogger('OBPConsentRequest');
+import type { RequestEvent, Actions } from '@sveltejs/kit';
+import { redirect, isRedirect } from '@sveltejs/kit';
+import { obp_requests } from '$lib/obp/requests';
+import { OBPRequestError } from '@obp/shared/obp';
+
+export async function load(event: RequestEvent) {
+	const consentRequestId = event.url.searchParams.get('CONSENT_REQUEST_ID');
+	const bankId = event.url.searchParams.get('bank_id');
+
+	if (!consentRequestId) {
+		return {
+			loadError: 'Missing required parameter: CONSENT_REQUEST_ID.',
+			consentRequestId: '',
+			bankId: bankId || '',
+			consentRequest: null,
+			payload: {},
+			consumerName: '',
+		};
+	}
+
+	if (!bankId) {
+		return {
+			loadError: 'Missing required parameter: bank_id.',
+			consentRequestId,
+			bankId: '',
+			consentRequest: null,
+			payload: {},
+			consumerName: '',
+		};
+	}
+
+	const token = event.locals.session.data.oauth?.access_token;
+	if (!token) {
+		return {
+			loadError: 'Unauthorized: No access token found in session.',
+			consentRequestId,
+			bankId,
+			consentRequest: null,
+			payload: {},
+			consumerName: '',
+		};
+	}
+
+	try {
+		const consentRequest = await obp_requests.get(
+			`/obp/v5.0.0/consumer/consent-requests/${consentRequestId}`,
+			token
+		);
+
+		logger.info(`Consent request response: ${JSON.stringify(consentRequest)}`);
+
+		let payload: any = {};
+		try {
+			payload = JSON.parse(consentRequest.payload || '{}');
+		} catch {
+			logger.warn('Could not parse consent request payload');
+		}
+		logger.info(`Parsed payload: ${JSON.stringify(payload)}`);
+
+		// Try to fetch the consumer/app name
+		let consumerName = '';
+		if (consentRequest.consumer_id) {
+			try {
+				const consumer = await obp_requests.get(
+					`/obp/v5.1.0/management/consumers/${consentRequest.consumer_id}`,
+					token
+				);
+				consumerName = consumer.app_name || '';
+			} catch {
+				logger.warn('Could not fetch consumer details');
+			}
+		}
+
+		// Store the OIDC return URL in session if present
+		const oidcReturnUrl = event.url.searchParams.get('oidc_return_url');
+		if (oidcReturnUrl) {
+			await event.locals.session.setData({
+				...event.locals.session.data,
+				obpConsentFlow: {
+					oidcReturnUrl,
+					consentRequestId,
+					bankId,
+				}
+			});
+			await event.locals.session.save();
+		}
+
+		return {
+			consentRequestId,
+			bankId,
+			consentRequest,
+			payload,
+			consumerName,
+		};
+	} catch (e) {
+		logger.error('Error fetching consent request:', e);
+		let errorMessage = 'Could not fetch consent request details.';
+		if (e instanceof OBPRequestError) {
+			errorMessage = e.message;
+		}
+		return {
+			loadError: errorMessage,
+			consentRequestId,
+			bankId,
+			consentRequest: null,
+			payload: {},
+			consumerName: '',
+		};
+	}
+}
+
+export const actions = {
+	confirm: async ({ request, locals }) => {
+		const formData = await request.formData();
+		const consentRequestId = formData.get('consentRequestId') as string;
+		const bankId = formData.get('bankId') as string;
+
+		const token = locals.session.data.oauth?.access_token;
+		if (!token) {
+			return { message: 'No access token found in session.' };
+		}
+
+		try {
+			const response = await obp_requests.post(
+				`/obp/v5.0.0/consumer/consent-requests/${consentRequestId}/IMPLICIT/consents`,
+				{},
+				token
+			);
+
+			const consentId = response.consent_id;
+			redirect(303, `/obp-consent-request-sca?CONSENT_ID=${consentId}&bank_id=${bankId}`);
+		} catch (e) {
+			if (isRedirect(e)) throw e;
+			logger.error('Error confirming consent request:', e);
+			let errorMessage = 'Failed to confirm consent request.';
+			if (e instanceof OBPRequestError) {
+				errorMessage = e.message;
+			}
+			return { message: errorMessage };
+		}
+	},
+
+	deny: async ({ locals }) => {
+		const flowData = locals.session.data.obpConsentFlow;
+		if (flowData?.oidcReturnUrl) {
+			const returnUrl = new URL(flowData.oidcReturnUrl);
+			returnUrl.searchParams.set('consent_status', 'REJECTED');
+			redirect(303, returnUrl.toString());
+		}
+		redirect(303, '/');
+	}
+} satisfies Actions;

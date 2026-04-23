@@ -42,3 +42,22 @@
 :where([data-mode=dark], [data-mode=dark] *)::-webkit-scrollbar-thumb {
 	background: oklch(80% 0 0 / 0.2);
 }
+
+/* Chat message markdown — compact styles for chat bubbles */
+.chat-markdown p { margin: 0.25em 0; }
+.chat-markdown p:first-child { margin-top: 0; }
+.chat-markdown p:last-child { margin-bottom: 0; }
+.chat-markdown { overflow-wrap: break-word; word-break: break-word; }
+.chat-markdown pre { margin: 0.5em 0; border-radius: 0.375rem; overflow-x: auto; font-size: 0.85em; background: rgba(0,0,0,0.3) !important; color: #e0e0e0; padding: 0.75em; white-space: pre; word-break: normal; overflow-wrap: normal; }
+.chat-markdown code { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.85em; padding: 0.15em 0.4em; border-radius: 0.25rem; background: rgba(0,0,0,0.2); }
+.chat-markdown pre code { padding: 0; background: none; color: inherit; }
+.chat-markdown a { text-decoration: underline; }
+.chat-markdown ul, .chat-markdown ol { margin: 0.25em 0; padding-left: 1.5em; }
+.chat-markdown li { margin: 0.1em 0; }
+.chat-markdown blockquote { margin: 0.25em 0; padding-left: 0.75em; border-left: 2px solid currentColor; opacity: 0.7; }
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3 { font-weight: bold; margin: 0.5em 0 0.25em; }
+.chat-markdown h1 { font-size: 1.25em; }
+.chat-markdown h2 { font-size: 1.1em; }
+.chat-markdown h3 { font-size: 1em; }
+.chat-markdown table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
+.chat-markdown th, .chat-markdown td { border: 1px solid currentColor; padding: 0.25em 0.5em; opacity: 0.8; }

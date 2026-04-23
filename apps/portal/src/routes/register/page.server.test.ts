@@ -59,7 +59,7 @@ describe('Register page actions', () => {
             request,
             locals: createMockLocals(),
             cookies: mockCookies
-        });
+        } as any);
 
         // Assert
         expect(obp_requests.post).toHaveBeenCalledWith(
@@ -91,7 +91,7 @@ describe('Register page actions', () => {
             request,
             locals: createMockLocals(false),
             cookies: mockCookies
-        });
+        } as any);
 
         // Assert
         expect(result).toEqual({
@@ -117,7 +117,7 @@ describe('Register page actions', () => {
             request,
             locals: createMockLocals(),
             cookies: mockCookies
-        });
+        } as any);
 
         // Assert
         expect(result).toEqual({
@@ -143,7 +143,7 @@ describe('Register page actions', () => {
             request,
             locals: createMockLocals(),
             cookies: mockCookies
-        });
+        } as any);
 
         // Assert
         const [endpoint, token, requestBody] = vi.mocked(obp_requests.post).mock.calls[0];

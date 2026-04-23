@@ -29,7 +29,7 @@ export const actions = {
         // Validate passwords match
         if (newPassword !== confirmPassword) {
             return {
-                error: 'Passwords do not match',
+                message: 'Passwords do not match',
                 success: false
             };
         }
@@ -37,14 +37,14 @@ export const actions = {
         // Validate password policy (two-tier rule)
         if (newPassword.length < 10) {
             return {
-                error: 'Password must be at least 10 characters long',
+                message: 'Password must be at least 10 characters long',
                 success: false
             };
         }
 
         if (newPassword.length > 512) {
             return {
-                error: 'Password must be at most 512 characters long',
+                message: 'Password must be at most 512 characters long',
                 success: false
             };
         }
@@ -58,7 +58,7 @@ export const actions = {
 
             if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChars) {
                 return {
-                    error: 'Password must contain uppercase, lowercase, number, and special character',
+                    message: 'Password must contain uppercase, lowercase, number, and special character',
                     success: false
                 };
             }
@@ -83,14 +83,14 @@ export const actions = {
             if (err instanceof OBPRequestError) {
                 logger.error("OBP API error during password reset:", err.message);
                 return {
-                    error: err.message,
+                    message: err.message,
                     success: false
                 };
             }
 
             logger.error("Error resetting password:", err);
             return {
-                error: `Failed to reset password: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                message: `Failed to reset password: ${err instanceof Error ? err.message : 'Unknown error'}`,
                 success: false
             };
         }

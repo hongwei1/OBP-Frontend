@@ -23,7 +23,7 @@ export async function load(event: RequestEvent ) {
         } catch (error) {
             logger.error("Failed to parse user data cookie:", error);
             return {
-                error: "Failed to parse user data cookie."
+                message: "Failed to parse user data cookie."
             };
         }
         

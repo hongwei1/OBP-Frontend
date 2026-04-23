@@ -1,5 +1,9 @@
 # OBP-Portal
 
+## OBP-API Proxy Pattern
+
+When making client-side calls to the OBP-API, use the generic proxy at `/proxy/obp/...` instead of creating dedicated API route files. The proxy adds OAuth authentication and passes responses through unmodified. Only create dedicated `/backend/...` routes when custom logic is needed (e.g. protocol bridging like gRPC → SSE). See [docs/obp-proxy.md](docs/obp-proxy.md) for details.
+
 ## HTML Best Practices
 
 Follow the guidelines in [docs/playwright-friendly-html.md](docs/playwright-friendly-html.md) when writing HTML. Key points:

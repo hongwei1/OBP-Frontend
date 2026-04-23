@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
+	let showAdvanced = $state(false);
 </script>
 
 <div
@@ -11,9 +12,9 @@
 		<h1 class="h4 text-center">Register a consumer</h1>
 	</header>
 	<article class="space-y-4 p-4">
-		{#if form?.error}
+		{#if form?.message}
 			<div class="bg-error-500/10 border-error-500 rounded-lg border p-4 text-center">
-				<p class="text-error-500 font-semibold">{form.error}</p>
+				<p class="text-error-500 font-semibold">{form.message}</p>
 			</div>
 		{/if}
 		<form class="w-full space-y-6 pb-10" method="POST">
@@ -50,6 +51,23 @@
 				<span class="label-text text-left">Company</span>
 				<input type="text" class="input" name="company" placeholder="Enter Company Name" required/>
 			</label>
+
+            <details data-testid="advanced-section" bind:open={showAdvanced}>
+				<summary class="cursor-pointer select-none flex items-center gap-2 text-sm font-medium">
+					<span class="transition-transform {showAdvanced ? 'rotate-90' : ''}">&#9654;</span>
+					Advanced
+				</summary>
+				<label class="label mt-4">
+					<span class="label-text">Client Certificate (PEM)</span>
+					<textarea
+						class="input font-mono text-sm"
+						name="client_certificate"
+						data-testid="client-certificate-input"
+						placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+						rows="6"
+					></textarea>
+				</label>
+			</details>
 
             <button type="submit" aria-label="submit" class="btn preset-filled-primary-500 w-full mt-5">Submit</button>
 		</form>

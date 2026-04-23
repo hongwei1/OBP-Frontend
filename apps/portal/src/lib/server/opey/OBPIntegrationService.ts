@@ -125,10 +125,8 @@ export class DefaultOBPIntegrationService implements OBPIntegrationService {
 	}
 
 	private isConsentExpired(consent: any): boolean {
-		const exp = consent.jwt_payload?.exp;
-		if (!exp) return true;
-		const now = Math.floor(Date.now() / 1000);
-		return exp < now;
+		if (!consent.jwt_expires_at) return true;
+		return new Date(consent.jwt_expires_at) < new Date();
 	}
 }
 

@@ -65,7 +65,7 @@
 	
 	async function refreshData() {
 		try {
-			const response = await fetch('/api/status');
+			const response = await fetch('/backend/status');
 			const newData = await response.json();
 			data = newData;
 			countdown = refreshInterval;

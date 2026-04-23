@@ -131,18 +131,18 @@ export const actions = {
 		const user = locals.session.data.user;
 
 		if (!token) {
-			return fail(401, { error: 'Please sign in to continue.' });
+			return fail(401, { message: 'Please sign in to continue.' });
 		}
 
 		if (!productCode) {
-			return fail(400, { error: 'Product code is required.' });
+			return fail(400, { message: 'Product code is required.' });
 		}
 
 		// Fetch the product to get stripe_price_id and bank_id
 		const product = await findProduct(productCode);
 
 		if (!product) {
-			return fail(404, { error: `Product not found: ${productCode}` });
+			return fail(404, { message: `Product not found: ${productCode}` });
 		}
 
 		const bankId = product.product.bank_id;
@@ -165,7 +165,7 @@ export const actions = {
 				errorMsg = e.message;
 			}
 			logger.error('Error creating account application:', e);
-			return fail(500, { error: errorMsg });
+			return fail(500, { message: errorMsg });
 		}
 
 		// If this is a free product, redirect to user profile

@@ -13,7 +13,7 @@ export const load: ServerLoad = async ({ url }) => {
 		logger.warn('No token provided for email validation');
 		return {
 			success: false,
-			error: 'No validation token provided. Please check your email for the validation link.'
+			message: 'No validation token provided. Please check your email for the validation link.'
 		};
 	}
 
@@ -35,7 +35,7 @@ export const load: ServerLoad = async ({ url }) => {
 			logger.error('OBP error during email validation:', error.obpErrorCode, error.message);
 			return {
 				success: false,
-				error: error.message,
+				message: error.message,
 				errorCode: error.obpErrorCode
 			};
 		}
@@ -43,7 +43,7 @@ export const load: ServerLoad = async ({ url }) => {
 		logger.error('Error validating email:', error);
 		return {
 			success: false,
-			error: 'Failed to validate email. Please try again or contact support.'
+			message: 'Failed to validate email. Please try again or contact support.'
 		};
 	}
 };

@@ -82,12 +82,12 @@ export const actions = {
 		const operationId = data.get('operation_id')?.toString();
 
 		if (!operationId) {
-			return fail(400, { error: 'Operation ID is required.' });
+			return fail(400, { message: 'Operation ID is required.' });
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return fail(401, { error: 'No access token found in session.' });
+			return fail(401, { message: 'No access token found in session.' });
 		}
 
 		const collectionId = params.collection_id;
@@ -107,7 +107,7 @@ export const actions = {
 			} else if (err instanceof Error) {
 				errorMessage = err.message;
 			}
-			return fail(500, { error: errorMessage });
+			return fail(500, { message: errorMessage });
 		}
 	},
 
@@ -116,12 +116,12 @@ export const actions = {
 		const endpointId = data.get('endpoint_id')?.toString();
 
 		if (!endpointId) {
-			return fail(400, { error: 'Endpoint ID is required.' });
+			return fail(400, { message: 'Endpoint ID is required.' });
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return fail(401, { error: 'No access token found in session.' });
+			return fail(401, { message: 'No access token found in session.' });
 		}
 
 		const collectionId = params.collection_id;
@@ -140,7 +140,7 @@ export const actions = {
 			} else if (err instanceof Error) {
 				errorMessage = err.message;
 			}
-			return fail(500, { error: errorMessage });
+			return fail(500, { message: errorMessage });
 		}
 	},
 
@@ -151,12 +151,12 @@ export const actions = {
 		const is_sharable = data.get('is_sharable') === 'true';
 
 		if (!name) {
-			return fail(400, { error: 'Collection name is required.' });
+			return fail(400, { message: 'Collection name is required.' });
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return fail(401, { error: 'No access token found in session.' });
+			return fail(401, { message: 'No access token found in session.' });
 		}
 
 		const collectionId = params.collection_id;
@@ -176,7 +176,7 @@ export const actions = {
 			} else if (err instanceof Error) {
 				errorMessage = err.message;
 			}
-			return fail(500, { error: errorMessage });
+			return fail(500, { message: errorMessage });
 		}
 	},
 
@@ -185,12 +185,12 @@ export const actions = {
 		const sourceCollectionId = data.get('source_collection_id')?.toString();
 
 		if (!sourceCollectionId) {
-			return fail(400, { error: 'Source collection is required.' });
+			return fail(400, { message: 'Source collection is required.' });
 		}
 
 		const token = locals.session.data.oauth?.access_token;
 		if (!token) {
-			return fail(401, { error: 'No access token found in session.' });
+			return fail(401, { message: 'No access token found in session.' });
 		}
 
 		const targetCollectionId = params.collection_id;
@@ -211,11 +211,11 @@ export const actions = {
 			} else if (err instanceof Error) {
 				errorMessage = err.message;
 			}
-			return fail(500, { error: errorMessage });
+			return fail(500, { message: errorMessage });
 		}
 
 		if (sourceEndpoints.length === 0) {
-			return fail(400, { error: 'Source collection has no endpoints to copy.' });
+			return fail(400, { message: 'Source collection has no endpoints to copy.' });
 		}
 
 		// Copy each endpoint to target collection, ignoring duplicates

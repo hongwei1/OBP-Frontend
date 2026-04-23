@@ -44,8 +44,35 @@ export function GET(event: RequestEvent) {
         throw error(500, 'OAuth configuration error');
     }
 
+    // Preserve OBP consent flow params across the OAuth login round-trip
+    const consentRequestId = event.url.searchParams.get('consent_request_id');
+    const bankId = event.url.searchParams.get('bank_id');
+    const oidcReturnUrl = event.url.searchParams.get('oidc_return_url');
+
+    logger.info(`Login request for provider: ${provider}, URL params: consent_request_id=${consentRequestId}, bank_id=${bankId}, oidc_return_url=${oidcReturnUrl}`);
+
+    if (consentRequestId) {
+        const consentFlowData = JSON.stringify({
+            consent_request_id: consentRequestId,
+            bank_id: bankId || '',
+            oidc_return_url: oidcReturnUrl || '',
+        });
+        event.cookies.set('obp_consent_flow', consentFlowData, {
+            httpOnly: true,
+            maxAge: 60 * 10,
+            secure: import.meta.env.PROD,
+            path: '/',
+            sameSite: 'lax'
+        });
+        logger.info(`Set obp_consent_flow cookie: ${consentFlowData}`);
+    } else {
+        logger.info('No consent_request_id in login request - normal login flow');
+    }
+
     try {
         const url = oauthClient.createAuthorizationURL(auth_endpoint, encodedState, scopes);
+        logger.info(`Authorization redirect for provider "${provider}" - client_id: ${url.searchParams.get('client_id') || 'N/A'}, auth_endpoint: ${auth_endpoint}`);
+        logger.debug(`Full authorization URL: ${url.toString()}`);
 
         event.cookies.set('obp_oauth_state', encodedState, {
             httpOnly: true,

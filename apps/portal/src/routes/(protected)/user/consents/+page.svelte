@@ -2,49 +2,11 @@
     import ConsentCard from "$lib/components/ConsentCard.svelte";
 
     let { data, form } = $props();
-
-    // Get current time in user's timezone for debugging
-    let currentLocalTime = $state('');
-
-    // Update the current time every second
-    function updateCurrentTime() {
-        currentLocalTime = new Date().toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            timeZoneName: 'short'
-        });
-    }
-
-    // Initialize and set up interval
-    updateCurrentTime();
-    if (typeof window !== 'undefined') {
-        setInterval(updateCurrentTime, 1000);
-    }
 </script>
 
-<h1 class="text-gray-900 dark:text-gray-100">Consents Management</h1>
-
-<p class="mb-4 text-gray-700 dark:text-gray-300">Here you can manage your consents.</p>
-
-<!-- Current Local Time for debugging -->
-<div class="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-    <h3 class="mb-2 text-sm font-medium text-blue-900 dark:text-blue-100">Debug Information</h3>
-    <p class="text-sm text-blue-800 dark:text-blue-200">
-        <strong>Current Local Time:</strong>
-        {currentLocalTime}
-    </p>
-    <p class="mt-1 text-xs text-blue-600 dark:text-blue-300">
-        All times are displayed in your local timezone. Compare with consent expiration times.
-    </p>
-</div>
-
-{#if form?.error}
+{#if form?.message}
     <div class="bg-error-500/10 border-error-500 mb-8 rounded-lg border p-4 text-center">
-        <p class="text-error-500 font-semibold">{form.error}</p>
+        <p class="text-error-500 font-semibold">{form.message}</p>
     </div>
 {/if}
 

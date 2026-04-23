@@ -139,6 +139,44 @@ npm run dev
 # User should log out and back in to get fresh JWTs
 ```
 
+## Architecture: OBP-API Proxy
+
+The SvelteKit Node backend acts as an **authenticated proxy** to the OBP-API. The browser never talks to the OBP-API directly — the user's OAuth token is held server-side in the session and added to each request.
+
+### Generic proxy (`/proxy/obp/...`)
+
+For endpoints that only need authentication forwarding (no request/response transformation), use the generic catch-all proxy at `src/routes/proxy/obp/[...path]/+server.ts`.
+
+The browser calls `/proxy/obp/v6.0.0/some/endpoint` and the proxy forwards it to `OBP_API_URL/obp/v6.0.0/some/endpoint` with the OAuth `Authorization` header. Responses and errors are passed through unmodified — the Portal does not reshape the OBP-API's JSON.
+
+```
+Browser → /proxy/obp/v6.0.0/chat-rooms/{id}/messages → OBP-API
+                    ↑ adds Authorization header
+```
+
+This means:
+- No boilerplate API route files per endpoint
+- The OBP-API path is visible in the browser URL (e.g. in DevTools network tab)
+- Error responses match the OBP-API format (`{ code, message }`)
+- Adding a new proxied endpoint requires zero Portal code changes
+
+### Dedicated routes (`/backend/...`)
+
+For endpoints that need **custom logic beyond auth forwarding**, use dedicated API routes under `src/routes/backend/`. Examples:
+
+- **gRPC → SSE bridge** (`/backend/chat/[chatRoomId]/stream`): Converts the OBP-API's gRPC stream into Server-Sent Events for the browser. This can't be a simple proxy because the transport protocol changes.
+
+### When to use which
+
+| Scenario | Use |
+|---|---|
+| Simple CRUD (GET/POST/PUT/DELETE to OBP-API) | `/proxy/obp/...` |
+| Protocol bridging (gRPC, WebSocket) | Dedicated `/backend/...` route |
+| Response transformation or aggregation | Dedicated `/backend/...` route |
+| Custom server-side validation | Dedicated `/backend/...` route |
+
+For more details, see [docs/obp-proxy.md](./docs/obp-proxy.md).
+
 ## Theming
 
 Themes should be created using the (skeleton UI designer)[https://themes.skeleton.dev/themes/create]. Then you can replace obp-theme.css with your file.
@@ -201,3 +239,47 @@ All log messages include the service/function name that generated the log for ea
 When no user identifier can be found in the JWT, the system will log all available JWT fields to help with debugging. The system prioritizes human-readable identifiers like email addresses and display names over system identifiers like UUIDs.
 
 Make sure that the `APP_CALLBACK_URL` is registered with the OAuth2/OIDC provider, so that it will properly redirect. Without this the Portal will not work.
+
+## Keycloak Front-Channel Logout Configuration
+
+When using Keycloak as your Identity Provider (IdP), the system automatically implements **Option 2: Front-Channel Logout (Browser-based)** for proper session management.
+
+### Configuration Requirements
+
+For Keycloak logout to work properly, ensure your OAuth client configuration includes:
+
+```javascript
+{
+  clientId: '[SET]',
+  clientSecret: '[SET]',
+  callbackUrl: 'http://localhost:5174/login/obp/callback',
+  configUrl: 'http://localhost:7787/realms/master/.well-known/openid-configuration'
+}
+```
+
+**Note**: The system supports multiple providers simultaneously:
+- **OBP-OIDC**: `http://localhost:9000/obp-oidc/.well-known/openid-configuration`  
+- **Keycloak**: `http://localhost:7787/realms/master/.well-known/openid-configuration`
+
+The Keycloak front-channel logout will only be used when the user is authenticated via the Keycloak provider.
+
+### How It Works
+
+1. **User clicks logout** in the application
+2. **App redirects browser** to Keycloak's `end_session_endpoint`
+3. **Keycloak ends the session** and logs the user out of all Keycloak-managed clients
+4. **Keycloak redirects back** to the application's origin URL
+
+### Logout Flow Parameters
+
+The system automatically sends these parameters to Keycloak's logout endpoint:
+
+- `id_token_hint`: The ID token from the user's session (required for proper logout)
+- `post_logout_redirect_uri`: The application origin URL (where to redirect after logout)
+
+### Provider-Specific Behavior
+
+- **Keycloak**: Uses front-channel logout via `end_session_endpoint` with ID token hint
+- **Other providers**: Falls back to standard token revocation via `revocation_endpoint`
+
+The system automatically detects the provider type and uses the appropriate logout method. No additional configuration is needed beyond ensuring your Keycloak realm has the proper `end_session_endpoint` configured in its OIDC discovery document.

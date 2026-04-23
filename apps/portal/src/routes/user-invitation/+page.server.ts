@@ -40,7 +40,7 @@ export const actions = {
 
         if (!secretKey) {
             return {
-                error: 'Invalid invitation link',
+                message: 'Invalid invitation link',
                 success: false
             };
         }
@@ -88,20 +88,20 @@ export const actions = {
                 // Check for specific error codes
                 if (err.code === 'OBP-37883') {
                     return {
-                        error: 'This invitation is invalid, has expired, or has already been used.',
+                        message: 'This invitation is invalid, has expired, or has already been used.',
                         success: false
                     };
                 }
                 
                 return {
-                    error: err.message,
+                    message: err.message,
                     success: false
                 };
             }
 
             logger.error("Error validating invitation:", err);
             return {
-                error: `Failed to validate invitation: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                message: `Failed to validate invitation: ${err instanceof Error ? err.message : 'Unknown error'}`,
                 success: false
             };
         }
@@ -129,28 +129,28 @@ export const actions = {
         // Validate required fields
         if (!secretKey) {
             return {
-                error: 'Invalid invitation link',
+                message: 'Invalid invitation link',
                 success: false
             };
         }
 
         if (!username || username.trim().length === 0) {
             return {
-                error: 'Username is required',
+                message: 'Username is required',
                 success: false
             };
         }
 
         if (!password || password.length < 8) {
             return {
-                error: 'Password must be at least 8 characters long',
+                message: 'Password must be at least 8 characters long',
                 success: false
             };
         }
 
         if (password !== confirmPassword) {
             return {
-                error: 'Passwords do not match',
+                message: 'Passwords do not match',
                 success: false
             };
         }
@@ -158,21 +158,21 @@ export const actions = {
         // Validate required checkboxes
         if (privacyPolicy !== 'on') {
             return {
-                error: 'You must accept the Privacy Policy',
+                message: 'You must accept the Privacy Policy',
                 success: false
             };
         }
 
         if (termsConditions !== 'on') {
             return {
-                error: 'You must accept the Terms and Conditions',
+                message: 'You must accept the Terms and Conditions',
                 success: false
             };
         }
 
         if (personalData !== 'on') {
             return {
-                error: 'You must consent to personal data collection',
+                message: 'You must consent to personal data collection',
                 success: false
             };
         }
@@ -222,41 +222,41 @@ export const actions = {
                 // Check for specific error codes
                 if (err.code === 'OBP-37883') {
                     return {
-                        error: 'This invitation is invalid, has expired, or has already been used.',
+                        message: 'This invitation is invalid, has expired, or has already been used.',
                         success: false
                     };
                 }
                 
                 if (err.code === 'OBP-20001') {
                     return {
-                        error: 'Username already exists. Please choose a different username.',
+                        message: 'Username already exists. Please choose a different username.',
                         success: false
                     };
                 }
 
                 if (err.code === 'OBP-20002') {
                     return {
-                        error: 'Email address is already registered.',
+                        message: 'Email address is already registered.',
                         success: false
                     };
                 }
 
                 if (err.code === 'OBP-10202') {
                     return {
-                        error: 'Password does not meet security requirements. Please use a stronger password.',
+                        message: 'Password does not meet security requirements. Please use a stronger password.',
                         success: false
                     };
                 }
                 
                 return {
-                    error: `Failed to create account: ${err.message}`,
+                    message: `Failed to create account: ${err.message}`,
                     success: false
                 };
             }
 
             logger.error("Unexpected error during invitation acceptance:", err);
             return {
-                error: `Failed to create account: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                message: `Failed to create account: ${err instanceof Error ? err.message : 'Unknown error'}`,
                 success: false
             };
         }

@@ -35,18 +35,18 @@ export const actions = {
         const value = formData.get('value')?.toString().trim();
 
         if (!name) {
-            return fail(400, { action: 'create', error: 'Name is required.', name, type, value });
+            return fail(400, { action: 'create', message: 'Name is required.', name, type, value });
         }
         if (!type || !VALID_TYPES.includes(type)) {
-            return fail(400, { action: 'create', error: 'A valid type is required.', name, type, value });
+            return fail(400, { action: 'create', message: 'A valid type is required.', name, type, value });
         }
         if (value === undefined || value === null || value === '') {
-            return fail(400, { action: 'create', error: 'Value is required.', name, type, value });
+            return fail(400, { action: 'create', message: 'Value is required.', name, type, value });
         }
 
         const token = locals.session.data.oauth?.access_token;
         if (!token) {
-            return fail(401, { action: 'create', error: 'Not authenticated.' });
+            return fail(401, { action: 'create', message: 'Not authenticated.' });
         }
 
         try {
@@ -58,7 +58,7 @@ export const actions = {
             if (err instanceof OBPRequestError) {
                 errorMessage = err.message;
             }
-            return fail(500, { action: 'create', error: errorMessage, name, type, value });
+            return fail(500, { action: 'create', message: errorMessage, name, type, value });
         }
     },
 
@@ -70,21 +70,21 @@ export const actions = {
         const value = formData.get('value')?.toString().trim();
 
         if (!id) {
-            return fail(400, { action: 'update', error: 'Field ID is required.' });
+            return fail(400, { action: 'update', message: 'Field ID is required.' });
         }
         if (!name) {
-            return fail(400, { action: 'update', error: 'Name is required.', editId: id });
+            return fail(400, { action: 'update', message: 'Name is required.', editId: id });
         }
         if (!type || !VALID_TYPES.includes(type)) {
-            return fail(400, { action: 'update', error: 'A valid type is required.', editId: id });
+            return fail(400, { action: 'update', message: 'A valid type is required.', editId: id });
         }
         if (value === undefined || value === null || value === '') {
-            return fail(400, { action: 'update', error: 'Value is required.', editId: id });
+            return fail(400, { action: 'update', message: 'Value is required.', editId: id });
         }
 
         const token = locals.session.data.oauth?.access_token;
         if (!token) {
-            return fail(401, { action: 'update', error: 'Not authenticated.' });
+            return fail(401, { action: 'update', message: 'Not authenticated.' });
         }
 
         try {
@@ -96,7 +96,7 @@ export const actions = {
             if (err instanceof OBPRequestError) {
                 errorMessage = err.message;
             }
-            return fail(500, { action: 'update', error: errorMessage, editId: id });
+            return fail(500, { action: 'update', message: errorMessage, editId: id });
         }
     },
 
@@ -105,12 +105,12 @@ export const actions = {
         const id = formData.get('user_attribute_id')?.toString();
 
         if (!id) {
-            return fail(400, { action: 'delete', error: 'Field ID is required.' });
+            return fail(400, { action: 'delete', message: 'Field ID is required.' });
         }
 
         const token = locals.session.data.oauth?.access_token;
         if (!token) {
-            return fail(401, { action: 'delete', error: 'Not authenticated.' });
+            return fail(401, { action: 'delete', message: 'Not authenticated.' });
         }
 
         try {
@@ -122,7 +122,7 @@ export const actions = {
             if (err instanceof OBPRequestError) {
                 errorMessage = err.message;
             }
-            return fail(500, { action: 'delete', error: errorMessage });
+            return fail(500, { action: 'delete', message: errorMessage });
         }
     }
 } satisfies Actions;

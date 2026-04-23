@@ -20,6 +20,7 @@ export const actions = {
             developer_email: formEntries.developer_email as string,
             description: formEntries.description as string,
             company: formEntries.company as string,
+            ...(formEntries.client_certificate ? { client_certificate: formEntries.client_certificate as string } : {}),
             enabled: true
         };
 
@@ -29,7 +30,7 @@ export const actions = {
         const token = locals.session.data.oauth?.access_token;
         if (!token) {
             return {
-                error: "No access token found in session."
+                message: "No access token found in session."
             };
         }
         // Make request to OBP to register the consumer
@@ -58,7 +59,7 @@ export const actions = {
                 errorMessage = error.message;
             }
             return {
-                error: errorMessage
+                message: errorMessage
             };
         }
 

@@ -44,3 +44,12 @@ export class OBPRequestError extends OBPErrorBase {
         return match ? match[0] : 'UNKNOWN_ERROR';
     }
 }
+
+export function obpErrorResponse(err: unknown, fallbackStatus: number = 500) {
+    const message = err instanceof Error ? err.message : String(err);
+    const status = (err as any)?.statusCode || fallbackStatus;
+    return {
+        body: { message, code: status },
+        status: status as number,
+    };
+}

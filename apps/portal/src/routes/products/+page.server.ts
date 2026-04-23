@@ -63,95 +63,34 @@ export async function load(event: RequestEvent) {
 		return {
 			products: [],
 			warnings: [],
-			error: errorMsg,
+			message: errorMsg,
 			apiExplorerUrl,
 			isLoggedIn
 		};
 	}
 
-	// Fetch products from all banks
 	let products: APIProductDetails[] = [];
-	const debugInfo: {
-		banksFound: number;
-		bankIds: string[];
-		rawBanksResponse?: any;
-		productResponses: Array<{ bankId: string; response?: any; error?: string }>;
-	} = {
-		banksFound: 0,
-		bankIds: [],
-		productResponses: []
-	};
 
-	// First, get all banks
-	let banks: Array<{ id: string }> = [];
 	try {
-		const banksResponse = await obp_requests.get(`/obp/${API_VERSION}/banks`);
-		debugInfo.rawBanksResponse = banksResponse;
-		const rawBanks = banksResponse?.banks || [];
-		banks = rawBanks.map((b: any) => ({ id: b.id || b.bank_id }));
-		debugInfo.banksFound = banks.length;
-		debugInfo.bankIds = banks.map(b => b.id);
-		logger.info(`Found ${banks.length} banks: ${banks.map(b => b.id).join(', ')}`);
+		const apiProductsResponse = await obp_requests.get(
+			`/obp/${API_VERSION}/api-products?tag=featured`,
+			token
+		);
+		const rawApiProducts = apiProductsResponse?.api_products || [];
+		products = rawApiProducts.map(mapApiProductDetails);
+		logger.info(`Fetched ${products.length} featured api products across all banks`);
 	} catch (e) {
-		logger.error('Error fetching banks:', e);
-		const errorMsg = e instanceof OBPRateLimitError
-			? 'API rate limit exceeded while fetching banks. Please wait a moment and try again.'
-			: e instanceof OBPTimeoutError
-				? 'Request timed out while fetching banks. The API server may be overloaded.'
-				: 'Could not fetch banks list.';
-		return {
-			products: [],
-			warnings: [],
-			error: errorMsg,
-			apiExplorerUrl,
-			isLoggedIn,
-			debug: debugInfo
-		};
-	}
-
-	// Fetch API Products from each bank using the dedicated api-products endpoint
-	for (const bank of banks) {
-		try {
-			const apiProductsResponse = await obp_requests.get(
-				`/obp/${API_VERSION}/banks/${bank.id}/api-products`,
-				token
-			);
-			debugInfo.productResponses.push({ bankId: bank.id, response: apiProductsResponse });
-
-			const rawApiProducts = apiProductsResponse?.api_products || [];
-			if (rawApiProducts.length > 0) {
-				// Filter to only products belonging to this bank
-				const bankProducts = rawApiProducts.filter((p: any) => p.bank_id === bank.id);
-				const crossBankCount = rawApiProducts.length - bankProducts.length;
-				if (crossBankCount > 0) {
-					logger.warn(
-						`GET /banks/${bank.id}/api-products returned ${crossBankCount} product(s) from other banks. Skipping these.`
-					);
-				}
-				logger.info(`Found ${bankProducts.length} API products in bank ${bank.id}`);
-
-				for (const apiProduct of bankProducts) {
-					products.push(mapApiProductDetails(apiProduct));
-				}
-			}
-		} catch (e) {
-			const errorMsg = e instanceof Error ? e.message : String(e);
-			debugInfo.productResponses.push({ bankId: bank.id, error: errorMsg });
-			if (e instanceof OBPRateLimitError) {
-				warnings.push(`API rate limit reached while loading products from bank "${bank.id}". Some products may be missing.`);
-				logger.warn('Rate limit hit, stopping bank iteration early');
-				break;
-			}
-			if (e instanceof OBPTimeoutError) {
-				warnings.push(`Request timed out loading products from bank "${bank.id}". Some products may be missing.`);
-			}
-			if (e instanceof OBPRequestError) {
-				warnings.push(e.message);
-			}
+		logger.error('Error fetching api products at all banks:', e);
+		if (e instanceof OBPRateLimitError) {
+			warnings.push('API rate limit exceeded while loading API products.');
+		} else if (e instanceof OBPTimeoutError) {
+			warnings.push('Request timed out loading API products.');
+		} else if (e instanceof OBPRequestError) {
+			warnings.push(`Could not load API products: ${e.message}`);
+		} else {
+			warnings.push('Could not load API products.');
 		}
 	}
-
-	logger.info(`Total products found across all banks: ${products.length}`);
 
 	// Sort products by price (free first, then ascending)
 	products.sort((a, b) => {
@@ -164,7 +103,6 @@ export async function load(event: RequestEvent) {
 		products,
 		warnings,
 		apiExplorerUrl,
-		isLoggedIn,
-		debug: debugInfo
+		isLoggedIn
 	};
 }

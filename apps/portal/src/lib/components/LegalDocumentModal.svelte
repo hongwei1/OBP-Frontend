@@ -67,6 +67,7 @@
 	<Dialog.Trigger
 		type="button"
 		class="rounded text-primary-500 hover:underline focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none"
+		data-testid="legal-trigger-{documentName}"
 	>
 		{triggerText}
 	</Dialog.Trigger>
@@ -148,6 +149,7 @@
 						onclick={handleAccept}
 						disabled={false}
 						class="rounded-md border border-transparent bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+						data-testid="legal-accept"
 					>
 						I Accept
 					</button>

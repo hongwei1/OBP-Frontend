@@ -8,7 +8,6 @@ import { obp_requests } from '$lib/obp/requests';
 
 import { env } from "$env/dynamic/private";
 import { env as publicEnv } from '$env/dynamic/public';
-import { LESS } from '$env/static/private';
 
 export interface RootLayoutData {
     userId?: string;
@@ -16,6 +15,7 @@ export interface RootLayoutData {
     username?: string;
     externalLinks: Record<string, string>;
     showEarlyAccess?: boolean;
+    totalUnreadCount?: number;
 }
 
 export async function load(event: RequestEvent) {
@@ -50,22 +50,39 @@ export async function load(event: RequestEvent) {
 
 	// Check if user has EARLY_ACCESS personal data field set to YES
 	let showEarlyAccess = false;
+	let totalUnreadCount = 0;
 	const accessToken = session?.data?.oauth?.access_token;
 	if (accessToken) {
 		try {
-			const response = await obp_requests.get('/obp/v6.0.0/my/personal-data-fields', accessToken);
-			const fields = response.user_attributes || [];
+			const [personalDataResponse, chatRoomsResponse] = await Promise.all([
+				obp_requests.get('/obp/v6.0.0/my/personal-data-fields', accessToken).catch((err) => {
+					logger.warn('Failed to fetch personal data fields:', err);
+					return { user_attributes: [] };
+				}),
+				obp_requests.get('/obp/v6.0.0/chat-rooms', accessToken).catch((err) => {
+					logger.warn('Failed to fetch chat rooms for unread count:', err);
+					return { chat_rooms: [] };
+				})
+			]);
+			const fields = personalDataResponse.user_attributes || [];
 			showEarlyAccess = fields.some(
 				(f: { name: string; value: string }) => f.name === 'EARLY_ACCESS' && f.value === 'YES'
 			);
+			// The chat-rooms endpoint returns unread_count on each room directly
+			const chatRooms = chatRoomsResponse.chat_rooms || [];
+			totalUnreadCount = chatRooms.reduce(
+				(sum: number, room: { unread_count?: number }) => sum + (room.unread_count || 0),
+				0
+			);
 		} catch (error) {
-			logger.debug('Could not fetch personal data fields for early access check:', error);
+			logger.warn('Could not fetch layout data:', error);
 		}
 	}
 
 	return {
 		...data,
 		externalLinks: validExternalLinks,
-		showEarlyAccess
+		showEarlyAccess,
+		totalUnreadCount
 	} as RootLayoutData
 }

@@ -16,7 +16,7 @@ export {
 
 // OBP API
 export { OBPRequests, createOBPRequests } from './obp/index.js';
-export { OBPErrorBase, OBPRequestError, OBPRateLimitError, OBPTimeoutError } from './obp/index.js';
+export { OBPErrorBase, OBPRequestError, OBPRateLimitError, OBPTimeoutError, obpErrorResponse } from './obp/index.js';
 
 // Opey
 export { ChatController, SessionController, ChatState, SessionState, RestChatService, OpeySessionService, CookieAuthStrategy } from './opey/index.js';

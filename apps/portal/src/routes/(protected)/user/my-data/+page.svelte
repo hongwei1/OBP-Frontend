@@ -17,29 +17,21 @@
                     {formatEntityName(entity.entityName)}
                 </h2>
 
-                {#if entity.dataError}
-                    <div class="rounded-lg bg-red-50 p-4 text-red-700 dark:bg-red-900/20 dark:text-red-300">
-                        Error: {entity.dataError}
-                    </div>
-                {:else if entity.data && entity.data.length > 0}
-                    <div class="space-y-3">
-                        {#each entity.data as item, index}
-                            <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
-                                <div class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                    Record {index + 1}
-                                </div>
-                                <dl class="grid grid-cols-2 gap-2 text-sm">
-                                    {#each Object.entries(item) as [key, value]}
-                                        <dt class="text-gray-500 dark:text-gray-400">{key}:</dt>
-                                        <dd class="text-gray-900 dark:text-gray-100">{value}</dd>
-                                    {/each}
-                                </dl>
+                <div class="space-y-3">
+                    {#each entity.data ?? [] as item, index}
+                        <div class="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
+                            <div class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                Record {index + 1}
                             </div>
-                        {/each}
-                    </div>
-                {:else}
-                    <p class="text-gray-500 dark:text-gray-400">No records yet.</p>
-                {/if}
+                            <dl class="grid grid-cols-2 gap-2 text-sm">
+                                {#each Object.entries(item as Record<string, unknown>) as [key, value]}
+                                    <dt class="text-gray-500 dark:text-gray-400">{key}:</dt>
+                                    <dd class="text-gray-900 dark:text-gray-100">{value}</dd>
+                                {/each}
+                            </dl>
+                        </div>
+                    {/each}
+                </div>
             </div>
         {/each}
     </div>
