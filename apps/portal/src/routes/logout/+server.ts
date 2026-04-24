@@ -3,7 +3,41 @@ const logger = createLogger('LogoutServer');
 import { SessionOAuthHelper } from "$lib/oauth/sessionHelper";
 import type { RequestEvent } from "@sveltejs/kit";
 import type { SessionOAuthStorageData } from "$lib/oauth/types";
+import { env } from "$env/dynamic/private";
 // Response is a global type, no need to import it
+
+/**
+ * Tell Opey to delete the user's session server-side.
+ * The browser sends Opey's 'session' cookie to portal/ on same-origin requests
+ * (because the /backend/opey/auth proxy forwarded the Set-Cookie from Opey),
+ * so we can just relay the incoming Cookie header to Opey's /delete-session.
+ *
+ * Time-bounded: never block logout on Opey availability.
+ */
+async function deleteOpeySession(event: RequestEvent, userId: string) {
+    const opeyBaseUrl = env.OPEY_BASE_URL;
+    const incomingCookie = event.request.headers.get('cookie');
+    if (!opeyBaseUrl || !incomingCookie) return;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3_000);
+    try {
+        const res = await fetch(`${opeyBaseUrl}/delete-session`, {
+            method: 'POST',
+            headers: { 'Cookie': incomingCookie },
+            signal: controller.signal
+        });
+        if (res.ok) {
+            logger.info(`Opey session invalidated for user: ${userId}`);
+        } else {
+            logger.warn(`Opey /delete-session returned ${res.status} for user: ${userId}`);
+        }
+    } catch (err) {
+        logger.warn(`Opey /delete-session failed for user ${userId} (non-fatal):`, err);
+    } finally {
+        clearTimeout(timeout);
+    }
+}
 
 /**
  * Logout handler that supports both token revocation and Keycloak front-channel logout.
@@ -52,10 +86,15 @@ export async function GET(event: RequestEvent): Promise<Response> {
     const provider = oauthData?.provider;
     const userId = session.data.user.user_id;
 
-    // Clear the session cookie and destroy the session
-    event.cookies.delete("obp-portal-connect.sid", {
-        path: "/",
-    });
+    // Invalidate the Opey session server-side (before destroying our own session,
+    // while we still have the incoming Cookie header to forward to Opey).
+    await deleteOpeySession(event, userId);
+
+    // Clear the session cookies (portal's own + Opey's 'session' cookie, which
+    // is scoped to this origin because the proxy forwarded Opey's Set-Cookie
+    // back to the browser as if portal.obp had set it).
+    event.cookies.delete("obp-portal-connect.sid", { path: "/" });
+    event.cookies.delete("session", { path: "/" });
     await session.destroy();
 
     // Handle Keycloak front-channel logout

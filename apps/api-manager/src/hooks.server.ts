@@ -5,6 +5,7 @@ import { error } from "@sveltejs/kit";
 import { sequence } from "@sveltejs/kit/hooks";
 import { sveltekitSessionHandle } from "svelte-kit-sessions";
 import RedisStore from "svelte-kit-connect-redis";
+import { RateLimiter } from "sveltekit-rate-limiter/server";
 import { Redis } from "ioredis";
 import { env } from "$env/dynamic/private";
 import { PUBLIC_OBP_BASE_URL } from "$env/static/public";
@@ -226,11 +227,34 @@ const checkAuthorization: Handle = async ({ event, resolve }) => {
   return response;
 };
 
+// Rate limiters for sensitive routes. In-memory store: resets on restart,
+// not shared across nodes. Migrate to Redis-backed for horizontal scaling.
+const loginLimiter = new RateLimiter({ IP: [5, 'm'] });
+const opeyLimiter = new RateLimiter({ IP: [30, 'm'] });
+
+function tooManyRequests(): Response {
+  return new Response(
+    JSON.stringify({ code: 429, message: 'Too many requests, please try again later.' }),
+    { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
+  );
+}
+
+const rateLimit: Handle = async ({ event, resolve }) => {
+  const path = event.url.pathname;
+
+  if (path.startsWith('/login') && (await loginLimiter.isLimited(event))) return tooManyRequests();
+  if (path.startsWith('/backend/opey/') && (await opeyLimiter.isLimited(event))) return tooManyRequests();
+
+  return resolve(event);
+};
+
 // Init SvelteKitSessions
 export const handle: Handle = sequence(
+  rateLimit,
   sveltekitSessionHandle({
-    secret: "secret",
+    secret: env.SESSION_SECRET,
     name: "obp-api-manager-ii-connect.sid",
+    cookie: { httpOnly: true, secure: true, sameSite: "lax" },
     store: new RedisStore({
       client,
       prefix: "obp-api-manager-ii-session:",

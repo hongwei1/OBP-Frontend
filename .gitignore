@@ -7,3 +7,5 @@ build
 .svelte-kit
 .DS_Store
 .claude
+security-scan.log
+security-fix.log

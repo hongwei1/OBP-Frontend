@@ -3,16 +3,20 @@ const logger = createLogger('OpeyInvokeProxy');
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from './$types';
 import { obpErrorResponse } from '$lib/obp/errors';
+import { checkAPIAuth } from '$lib/utils/apiAuth';
 import { env } from '$env/dynamic/private';
 
 /**
- * POST /api/opey/invoke
+ * POST /backend/opey/invoke
  *
  * Proxies non-streaming invoke requests to the Opey service.
  * Used by the Opey Insight Bar for quick, single-response insights.
  * Returns the complete ChatMessage response (no streaming).
  */
 export async function POST(event: RequestEvent) {
+	const auth = checkAPIAuth(event.locals);
+	if (!auth.authenticated) return auth.error!;
+
 	const opeyBaseUrl = env.OPEY_BASE_URL || 'http://localhost:5000';
 	const body = await event.request.text();
 	const cookie = event.request.headers.get('cookie') || '';

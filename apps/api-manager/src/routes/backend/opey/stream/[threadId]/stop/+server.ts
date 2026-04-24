@@ -3,9 +3,13 @@ const logger = createLogger('OpeyStopProxy');
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from './$types';
 import { obpErrorResponse } from '$lib/obp/errors';
+import { checkAPIAuth } from '$lib/utils/apiAuth';
 import { env } from '$env/dynamic/private';
 
 export async function POST(event: RequestEvent) {
+	const auth = checkAPIAuth(event.locals);
+	if (!auth.authenticated) return auth.error!;
+
 	const opeyBaseUrl = env.OPEY_BASE_URL || 'http://localhost:5000';
 	const { threadId } = event.params;
 	const cookie = event.request.headers.get('cookie') || '';

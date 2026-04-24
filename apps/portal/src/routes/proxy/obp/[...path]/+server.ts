@@ -26,7 +26,24 @@ async function proxyRequest(event: Parameters<RequestHandler>[0]): Promise<Respo
 	}
 
 	const accessToken = session.data.oauth?.access_token;
-	const obpPath = `/obp/${event.params.path}`;
+
+	// Reject path-traversal and absolute-URL attempts before joining into the OBP URL.
+	const rawPath = event.params.path ?? '';
+	if (
+		rawPath === '' ||
+		rawPath.includes('..') ||
+		rawPath.startsWith('/') ||
+		rawPath.includes('://') ||
+		rawPath.includes('\0')
+	) {
+		logger.warn(`Rejected proxy path: ${rawPath}`);
+		return new Response(JSON.stringify({ code: 400, message: 'Invalid path' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}
+
+	const obpPath = `/obp/${rawPath}`;
 	const queryString = event.url.search;
 	const url = `${OBP_BASE_URL}${obpPath}${queryString}`;
 

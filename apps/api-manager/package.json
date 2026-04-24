@@ -58,6 +58,7 @@
     "@grpc/proto-loader": "^0.8.0",
     "@langchain/core": "^0.3.57",
     "@lucide/svelte": "^0.513.0",
+    "@obp/shared": "*",
     "@types/d3": "^7.4.3",
     "arctic": "^3.7.0",
     "bits-ui": "^2.8.10",
@@ -66,9 +67,9 @@
     "jwt-decode": "^4.0.0",
     "langchain": "^0.3.27",
     "markdown-it": "^14.1.0",
-    "@obp/shared": "*",
     "prismjs": "^1.30.0",
     "svelte-kit-connect-redis": "^0.1.0",
-    "svelte-kit-sessions": "^0.4.0"
+    "svelte-kit-sessions": "^0.4.0",
+    "sveltekit-rate-limiter": "^0.7.0"
   }
 }

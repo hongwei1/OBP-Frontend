@@ -1,10 +1,11 @@
 import { createLogger } from '@obp/shared/utils';
 const logger = createLogger('OpeyStreamProxy');
 import type { RequestEvent } from './$types';
+import { checkAPIAuth } from '$lib/utils/apiAuth';
 import { env } from '$env/dynamic/private';
 
 /**
- * POST /api/opey/stream
+ * POST /backend/opey/stream
  *
  * Proxies streaming chat requests to the Opey service.
  * The browser sends to this same-origin endpoint (no CORS issues),
@@ -13,6 +14,9 @@ import { env } from '$env/dynamic/private';
  * Uses a ReadableStream with explicit chunk-by-chunk enqueue to prevent buffering.
  */
 export async function POST(event: RequestEvent) {
+	const auth = checkAPIAuth(event.locals);
+	if (!auth.authenticated) return auth.error!;
+
 	const opeyBaseUrl = env.OPEY_BASE_URL || 'http://localhost:5000';
 	const body = await event.request.text();
 	const cookie = event.request.headers.get('cookie') || '';

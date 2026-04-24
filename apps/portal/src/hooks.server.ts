@@ -5,6 +5,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { sveltekitSessionHandle } from 'svelte-kit-sessions';
 import RedisStore from 'svelte-kit-connect-redis';
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
 import { env } from '$env/dynamic/private';
 import { obp_requests } from '$lib/obp/requests';
@@ -228,8 +229,35 @@ const transformHTML: Handle = async ({ event, resolve }) => {
 	return response;
 }
 
+// Rate limiters for sensitive routes. In-memory store: resets on restart,
+// not shared across nodes. Migrate to Redis-backed for horizontal scaling.
+// See sveltekit-rate-limiter docs for RedisStore adapter.
+const loginLimiter = new RateLimiter({ IP: [5, 'm'] });
+const resetLimiter = new RateLimiter({ IP: [5, '15m'] });
+const registerLimiter = new RateLimiter({ IP: [3, '15m'] });
+
+function tooManyRequests(): Response {
+	return new Response(
+		JSON.stringify({ code: 429, message: 'Too many requests, please try again later.' }),
+		{ status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
+	);
+}
+
+const rateLimit: Handle = async ({ event, resolve }) => {
+	const path = event.url.pathname;
+
+	if (path.startsWith('/login') && (await loginLimiter.isLimited(event))) return tooManyRequests();
+	if ((path.startsWith('/forgot-password') || path.startsWith('/reset-password')) && (await resetLimiter.isLimited(event)))
+		return tooManyRequests();
+	if ((path === '/register' || path.startsWith('/consumers/register')) && (await registerLimiter.isLimited(event)))
+		return tooManyRequests();
+
+	return resolve(event);
+};
+
 // Init SvelteKitSessions
 export const handle: Handle = sequence(
+	rateLimit,
 	sveltekitSessionHandle({
 		name: 'obp-portal-connect.sid',
 		secret: env.SESSION_SECRET,
