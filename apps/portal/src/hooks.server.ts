@@ -232,25 +232,46 @@ const transformHTML: Handle = async ({ event, resolve }) => {
 // Rate limiters for sensitive routes. In-memory store: resets on restart,
 // not shared across nodes. Migrate to Redis-backed for horizontal scaling.
 // See sveltekit-rate-limiter docs for RedisStore adapter.
-const loginLimiter = new RateLimiter({ IP: [5, 'm'] });
+const loginLimiter = new RateLimiter({ IP: [10, 'm'] });
 const resetLimiter = new RateLimiter({ IP: [5, '15m'] });
 const registerLimiter = new RateLimiter({ IP: [3, '15m'] });
 
+// Shared-secret bypass for automated tests. Leave unset in production so the
+// bypass path is physically unreachable there.
+const RATE_LIMIT_BYPASS_TOKEN = env.RATE_LIMIT_BYPASS_TOKEN;
+
 function tooManyRequests(): Response {
 	return new Response(
-		JSON.stringify({ code: 429, message: 'Too many requests, please try again later.' }),
+		JSON.stringify({ code: 429, message: 'OBP API Portal says: Too many requests, please try again later.' }),
 		{ status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
 	);
 }
 
 const rateLimit: Handle = async ({ event, resolve }) => {
+	if (
+		RATE_LIMIT_BYPASS_TOKEN &&
+		event.request.headers.get('rate-limit-bypass-token') === RATE_LIMIT_BYPASS_TOKEN
+	) {
+		return resolve(event);
+	}
+
 	const path = event.url.pathname;
 
-	if (path.startsWith('/login') && (await loginLimiter.isLimited(event))) return tooManyRequests();
-	if ((path.startsWith('/forgot-password') || path.startsWith('/reset-password')) && (await resetLimiter.isLimited(event)))
-		return tooManyRequests();
-	if ((path === '/register' || path.startsWith('/consumers/register')) && (await registerLimiter.isLimited(event)))
-		return tooManyRequests();
+	if (
+		(path === '/login' || path === '/login/') &&
+		event.request.method === 'POST' &&
+		(await loginLimiter.isLimited(event))
+	) return tooManyRequests();
+	if (
+		(path.startsWith('/forgot-password') || path.startsWith('/reset-password')) &&
+		event.request.method === 'POST' &&
+		(await resetLimiter.isLimited(event))
+	) return tooManyRequests();
+	if (
+		(path === '/register' || path.startsWith('/consumers/register')) &&
+		event.request.method === 'POST' &&
+		(await registerLimiter.isLimited(event))
+	) return tooManyRequests();
 
 	return resolve(event);
 };
