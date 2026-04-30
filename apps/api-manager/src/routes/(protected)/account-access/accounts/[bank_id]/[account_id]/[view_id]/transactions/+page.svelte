@@ -32,7 +32,7 @@
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to fetch transactions");
+        throw new Error(data.message || data.error || "Failed to fetch transactions");
       }
       const data = await res.json();
       transactions = data.transactions || [];
