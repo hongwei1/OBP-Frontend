@@ -3,13 +3,20 @@
  *
  * OBP rejects `POST /obp/.../my/consents/IMPLICIT` with OBP-35020 when
  * `time_to_live` exceeds the server prop `consents.max_time_to_live`. To avoid
- * that error we fetch the public endpoint `GET /obp/v7.0.0/consents/config`
- * (which returns `max_time_to_live_in_seconds`) and clamp our requested TTL
- * against it before creating the consent.
+ * that error we fetch the public config endpoint (which returns
+ * `max_time_to_live_in_seconds`) and clamp our requested TTL against it before
+ * creating the consent.
  *
- * The endpoint may not yet exist on older OBP versions — in that case the
- * helper returns `null` and capping is silently skipped. Callers should keep
- * their existing TTL choice unchanged in that case.
+ * TWO paths are tried, newest first. OBP-API renamed this endpoint from
+ * `/obp/v7.0.0/consents/config` to `/obp/v7.0.0/public/consent-config`, so a
+ * single path only works against one side of that rename.
+ *
+ * The endpoint may also genuinely not exist on older OBP versions — in that case
+ * the helper returns `null` and capping is skipped. That tolerance is why the
+ * rename went unnoticed: asking the wrong URL and talking to an older server look
+ * identical from here, and both silently disable the capping this module exists to
+ * do. Trying both paths is what tells them apart, so keep the fallback even when
+ * the new path becomes universal.
  *
  * Cached in-process: 1 hour on success, 5 minutes on miss/error (so a deploy
  * that adds the endpoint is picked up reasonably quickly without spamming).
@@ -33,6 +40,40 @@ let cache: CacheEntry | null = null;
 export type ObpGet = (path: string, accessToken?: string) => Promise<any>;
 
 /**
+ * Newest first. `/public/consent-config` is where OBP-API serves this today;
+ * `/consents/config` is the pre-rename path, kept so one Portal build works against
+ * servers on either side of the change.
+ */
+const CONFIG_PATHS = ['/obp/v7.0.0/public/consent-config', '/obp/v7.0.0/consents/config'];
+
+/**
+ * Try each known path in turn, returning the first response that carries the field.
+ *
+ * A path that is simply not routed (OBP answers `OBP-10404`, its routing-miss code)
+ * means "wrong URL for this server", so the next candidate is tried. Any other failure
+ * — auth, a 5xx, a network error — is not a wrong-URL signal and is rethrown, so a
+ * broken server is not quietly reported as "endpoint unavailable".
+ */
+async function fetchConfig(obpGet: ObpGet): Promise<any | null> {
+	let lastNotFound: unknown = null;
+	for (const path of CONFIG_PATHS) {
+		try {
+			const data = await obpGet(path);
+			if (data && typeof data === 'object') return data;
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			if (msg.includes('OBP-10404') || msg.includes('404')) {
+				lastNotFound = err;
+				continue;
+			}
+			throw err;
+		}
+	}
+	if (lastNotFound) throw lastNotFound;
+	return null;
+}
+
+/**
  * Return the server's `consents.max_time_to_live` (in seconds), or `null` if
  * the endpoint is unavailable on this OBP version.
  */
@@ -41,7 +82,7 @@ export async function getConsentsMaxTtlSeconds(obpGet: ObpGet): Promise<number |
 	if (cache && cache.expiresAt > now) return cache.value;
 
 	try {
-		const data = await obpGet('/obp/v7.0.0/consents/config');
+		const data = await fetchConfig(obpGet);
 		const raw = data?.max_time_to_live_in_seconds;
 		const max = typeof raw === 'number' && raw > 0 ? raw : null;
 		cache = {
@@ -59,7 +100,10 @@ export async function getConsentsMaxTtlSeconds(obpGet: ObpGet): Promise<number |
 		// Keep this at debug so it isn't noisy in production logs.
 		const msg = err instanceof Error ? err.message : String(err);
 		cache = { value: null, expiresAt: now + CACHE_MISS_TTL_MS };
-		logger.debug(`OBP /consents/config unavailable, TTL capping disabled: ${msg}`);
+		logger.debug(
+			`OBP consent-config unavailable on ${CONFIG_PATHS.join(' and ')}, ` +
+				`TTL capping disabled: ${msg}`
+		);
 		return null;
 	}
 }

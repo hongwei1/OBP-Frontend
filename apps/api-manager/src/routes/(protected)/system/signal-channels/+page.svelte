@@ -1,6 +1,22 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
 
+  // userEntitlements comes from (protected)/+layout.server.ts, which every page under
+  // (protected) already receives. Read inside $derived rather than pulled out into a
+  // const first: a plain const captures only the initial value of `data`, and the session
+  // user (with its entitlements) is refreshed by invalidate("app:session-user").
+  let { data } = $props();
+
+  const DELETE_ROLE = "CanDeleteSignalChannel";
+
+  // OBP-API added CanDeleteSignalChannel to DELETE /signal/channels/{name}. Without this
+  // check the request is still sent and the 403 is surfaced afterwards, so the only way to
+  // find out is to press a destructive-looking button and have it refused. Same shape as
+  // consumers/[consumer_id]/edit: check first, say what is missing, send nothing.
+  let canDeleteChannel = $derived(
+    (data?.userEntitlements || []).some((e: any) => e.role_name === DELETE_ROLE),
+  );
+
   const AUTO_REFRESH_INTERVAL = 15_000;
   const AUTO_REFRESH_SECONDS = AUTO_REFRESH_INTERVAL / 1000;
   let autoRefreshTimer: ReturnType<typeof setInterval>;
@@ -129,6 +145,12 @@
   }
 
   async function deleteChannel(channelName: string) {
+    if (!canDeleteChannel) {
+      deleteError = `You do not have the ${DELETE_ROLE} role, which OBP-API requires to delete a signal channel.`;
+      deleteSuccess = null;
+      return;
+    }
+
     if (
       !confirm(
         `Are you sure you want to delete channel "${channelName}" and all its messages?`,
@@ -429,8 +451,11 @@
                     <button
                       class="btn-delete"
                       onclick={() => deleteChannel(channel.channel_name)}
-                      disabled={deletingChannel === channel.channel_name}
-                      title="Delete channel"
+                      disabled={deletingChannel === channel.channel_name ||
+                        !canDeleteChannel}
+                      title={canDeleteChannel
+                        ? "Delete channel"
+                        : `Requires the ${DELETE_ROLE} role`}
                     >
                       {deletingChannel === channel.channel_name
                         ? "Deleting..."

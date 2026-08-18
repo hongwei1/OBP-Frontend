@@ -137,6 +137,10 @@ export const SITE_MAP: Record<string, PageRoleConfig> = {
   },
   "/system/signal-channels": {
     required: [],
+    // Viewing channels needs nothing; deleting one has required CanDeleteSignalChannel
+    // since OBP-API added the role. Declared as optional so the page stays reachable
+    // and only the delete action is gated.
+    optional: [{ role: "CanDeleteSignalChannel" }],
   },
   "/system/signal-channels-stats": {
     required: [{ role: "CanGetSignalStats" }],
